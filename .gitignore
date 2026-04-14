@@ -1,0 +1,19 @@
+# Google認証ファイル（絶対にコミットしない）
+credentials.json
+
+# ログ
+scraper.log
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
