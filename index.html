@@ -5003,6 +5003,14 @@ const AREA_PRESETS = {
 /* 検索UIの内部状態 */
 let srchArea = null;
 let srchCities = [];  /* 検索対象に選んだ市（空＝全市） */
+let srchGenre = 'all';  /* 選択中の業種 */
+const SRCH_GENRES = [
+  { id:'all',      name:'製造業', kws:['製造業','工場','製作所','工業'] },
+  { id:'auto',     name:'自動車', kws:['自動車部品','車載部品','部品製造','自動車'] },
+  { id:'food',     name:'食品',   kws:['食品工場','食品加工','製パン','製菓'] },
+  { id:'elec',     name:'電子',   kws:['電子部品','半導体','基板','電子機器'] },
+  { id:'butsuryu', name:'物流',   kws:['物流','倉庫','配送センター','運送'] },
+];
 let srchKeywords = [];
 let srchCount = 100;
 
@@ -5037,9 +5045,9 @@ function selectAreaPreset(id) {
     const cat = KW_CATEGORIES.find(c => c.id === catId);
     if (cat) cat.kws.forEach(k => catKws.add(k));
   });
-  srchArea.keywords.forEach(k => catKws.add(k));
-  /* あなたの検索方法に合わせ「製造業」「工場」を必ず先頭に置く（高ヒット） */
-  srchKeywords = ['製造業', '工場', ...[...catKws].filter(k => k !== '製造業' && k !== '工場')];
+  /* 業種ボタンで検索キーワードを決める（既定は製造業） */
+  srchGenre = 'all';
+  srchKeywords = SRCH_GENRES.find(g => g.id === 'all').kws.slice();
   srchCities = (srchArea.cities || []).slice();  /* 既定は全市選択 */
   srchCount = 100;
   renderKeywordStep();
@@ -5093,17 +5101,12 @@ function renderKeywordStep() {
       }).join('')}</div>
     </div>
 
-    <div style="margin-bottom:12px">
-      <div style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.38);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:7px">
-        キーワード選択（カテゴリ別）
-        <span id="kw-total-cnt" style="margin-left:8px;color:rgba(0,245,255,.7);font-weight:700;font-size:.65rem">${srchKeywords.length}件選択中</span>
-      </div>
-      <div id="kw-categories">${catHtml}</div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <input type="text" id="kw-add-inp" class="kw-add-inp" placeholder="＋ カスタムキーワードを追加"
-               onkeydown="if(event.key==='Enter')addSrchKw()">
-        <button class="kw-add-btn" onclick="addSrchKw()">追加</button>
-      </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.38);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:7px">業種を選ぶ</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${SRCH_GENRES.map(g => {
+        const on = srchGenre === g.id;
+        return `<button onclick="setSrchGenre('${g.id}')" style="padding:9px 20px;border-radius:10px;border:1px solid ${on?'var(--cyan)':'var(--border)'};background:${on?'rgba(0,245,255,.15)':'var(--surface2)'};color:${on?'var(--cyan)':'var(--text)'};font-size:.82rem;font-weight:700;cursor:pointer">${g.name}</button>`;
+      }).join('')}</div>
     </div>
 
     <div style="margin-bottom:16px">
@@ -5143,6 +5146,13 @@ function toggleKw(btn, kw) {
   updateKwTotalCnt();
 }
 
+function setSrchGenre(id) {
+  const g = SRCH_GENRES.find(x => x.id === id);
+  if (!g) return;
+  srchGenre = id;
+  srchKeywords = g.kws.slice();
+  renderKeywordStep();
+}
 function toggleCity(btn, city) {
   const idx = srchCities.indexOf(city);
   if (idx >= 0) srchCities.splice(idx, 1); else srchCities.push(city);
