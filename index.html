@@ -5038,7 +5038,8 @@ function selectAreaPreset(id) {
     if (cat) cat.kws.forEach(k => catKws.add(k));
   });
   srchArea.keywords.forEach(k => catKws.add(k));
-  srchKeywords = [...catKws];
+  /* あなたの検索方法に合わせ「製造業」「工場」を必ず先頭に置く（高ヒット） */
+  srchKeywords = ['製造業', '工場', ...[...catKws].filter(k => k !== '製造業' && k !== '工場')];
   srchCities = (srchArea.cities || []).slice();  /* 既定は全市選択 */
   srchCount = 100;
   renderKeywordStep();
