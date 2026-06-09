@@ -4382,6 +4382,9 @@ function renderSalesList() {
         ${callsHtml}
       </td>
       <td data-label="" style="vertical-align:top">
+        ${pipeline.some(p => p.company === s.name)
+          ? `<div style="font-size:.66rem;color:var(--cyan);font-weight:700;margin-bottom:6px;white-space:nowrap">商談中 ✓</div>`
+          : `<button class="btn btn-sm" style="background:rgba(159,122,234,.18);border:1px solid rgba(159,122,234,.6);color:#c4a8ff;font-size:.68rem;padding:4px 12px;margin-bottom:6px;white-space:nowrap" onclick="salesToPipeline('${s.id}')">🤝 商談へ</button>`}
         <button onclick="deleteSalesRow('${s.id}')" title="この企業を削除"
           style="background:none;border:none;color:#c66;cursor:pointer;font-size:.9rem">🗑</button>
       </td>
@@ -4417,6 +4420,13 @@ function deleteSalesCall(id, idx) {
   if (!s || !s.calls) return;
   s.calls.splice(idx, 1);
   save(); renderSalesList();
+}
+function salesToPipeline(id) {
+  const s = salesList.find(x => x.id === id);
+  if (!s) return;
+  if (pipeline.some(p => p.company === s.name)) { toast('すでに商談に登録済みです', 'ok'); return; }
+  syncPipeline(s.name, s.phone, 'appointment', '');
+  renderSalesList();
 }
 function deleteSalesRow(id) {
   if (!confirm('この企業を営業リストから削除しますか？')) return;
