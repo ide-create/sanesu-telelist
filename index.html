@@ -2762,23 +2762,27 @@ tr.row-contracted td:first-child{opacity:.55}
       <div id="res-form-contract" style="display:none;border-top:1px solid rgba(0,255,136,.2);padding-top:12px;margin-top:4px">
         <div class="pipe-grid">
           <div class="field">
-            <label>[ 契約金額（万円）]</label>
-            <input type="number" id="res-contract-amount" placeholder="例：300" min="0" step="10">
+            <label>[ 派遣単価（円）]</label>
+            <input type="number" id="res-haken-tanka" placeholder="例：1800" min="0" step="10">
           </div>
           <div class="field">
-            <label>[ 契約開始日 ]</label>
+            <label>[ 契約日 ]</label>
             <input type="date" id="res-contract-start" style="color-scheme:dark">
           </div>
         </div>
-        <div class="field">
-          <label>[ 契約期間 ]</label>
-          <div class="res-period-btns">
-            <button class="res-period-btn" data-period="3ヶ月" onclick="selectPeriod(this)">3ヶ月</button>
-            <button class="res-period-btn" data-period="6ヶ月" onclick="selectPeriod(this)">6ヶ月</button>
-            <button class="res-period-btn" data-period="1年"   onclick="selectPeriod(this)">1年</button>
-            <button class="res-period-btn" data-period="長期"  onclick="selectPeriod(this)">長期</button>
+        <div class="pipe-grid">
+          <div class="field">
+            <label>[ 総派遣社員数（取引先全体）]</label>
+            <input type="number" id="res-total-staff" placeholder="例：50" min="0" step="1" oninput="calcShareRate()">
           </div>
-          <input type="hidden" id="res-contract-period" value="">
+          <div class="field">
+            <label>[ 自社（サンエス）社員数 ]</label>
+            <input type="number" id="res-own-staff" placeholder="例：12" min="0" step="1" oninput="calcShareRate()">
+          </div>
+        </div>
+        <div class="field">
+          <label>[ シェア率（自動計算）]</label>
+          <div id="res-share-rate" style="font-size:1.5rem;font-weight:800;color:var(--cyan);padding:6px 0">—</div>
         </div>
         <div class="field">
           <label>[ 商談メモ ]（必須）</label>
@@ -6350,6 +6354,19 @@ function selectPeriod(btn) {
   if (inp) inp.value = btn.dataset.period;
 }
 
+function calcShareRate() {
+  const total = parseInt(document.getElementById('res-total-staff')?.value || 0);
+  const own   = parseInt(document.getElementById('res-own-staff')?.value || 0);
+  const el = document.getElementById('res-share-rate');
+  if (!el) return;
+  if (total > 0 && own >= 0) {
+    const r = Math.round(own / total * 1000) / 10;
+    el.textContent = r + ' %';
+  } else {
+    el.textContent = '—';
+  }
+}
+
 function saveResult() {
   if (!_resultCardId || !_resultType) { toast('商談結果を選択してください', 'err'); return; }
   const c = pipeline.find(p => p.id === _resultCardId);
@@ -6364,17 +6381,18 @@ function saveResult() {
   if (_resultType === 'contract') {
     const memo = document.getElementById('res-contract-memo')?.value.trim();
     if (!memo) { toast('商談メモを入力してください', 'err'); return; }
-    const amtInput = parseFloat(document.getElementById('res-contract-amount')?.value || 0);
+    const tanka = parseFloat(document.getElementById('res-haken-tanka')?.value || 0);
     const startDate = document.getElementById('res-contract-start')?.value || '';
-    const period    = document.getElementById('res-contract-period')?.value || '';
-
+    const totalStaff = parseInt(document.getElementById('res-total-staff')?.value || 0);
+    const ownStaff   = parseInt(document.getElementById('res-own-staff')?.value || 0);
     c.dealHistory.push({ date:resDate.slice(0,10), time:resDate.slice(11,16)||'', type:'訪問',
       participants:resContact, content:memo, nextAction:'契約管理へ' });
     c.stage = 'contract';
     c.contractDate  = today;
     c.contractStart = startDate;
-    c.contractPeriod = period;
-    if (amtInput) c.amount = String(amtInput * 10000);
+    c.unitPrice   = tanka ? String(tanka) : (c.unitPrice||'');
+    c.totalStaff  = totalStaff || 0;
+    c.sanesuStaff = ownStaff || 0;
     if (resContact) c.contact = resContact;
     save(); closeModal('ov-result'); renderPipelineV2(); updateKPIs(); renderSchedule(); updateBadges();
     syncPipeline(c.company, c.phone, 'contracted', c.contact);
