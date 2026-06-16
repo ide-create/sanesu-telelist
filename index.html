@@ -1087,6 +1087,8 @@ tr.row-contracted td:first-child{opacity:.55}
 .db-prog-lbl{font-size:.76rem;color:rgba(255,255,255,.75);flex:1;letter-spacing:.3px;font-weight:500}
 .db-prog-nums{font-size:1.25rem;font-weight:700;font-family:var(--mono);color:#fff;letter-spacing:-.5px}
 .db-prog-tgt{font-size:.62rem;color:rgba(255,255,255,.45);font-weight:400;letter-spacing:0}
+.db-prog-tgt-edit{cursor:pointer;border-bottom:1px dashed rgba(0,245,255,.5);transition:color .15s}
+.db-prog-tgt-edit:hover{color:#00f5ff}
 .db-prog-pct{font-size:.95rem;font-family:var(--mono);font-weight:700;min-width:44px;text-align:right}
 .db-prog-track{height:10px;background:rgba(255,255,255,.08);overflow:hidden;border-radius:5px;margin-top:3px}
 .db-prog-fill{height:100%;border-radius:5px;transition:width .9s cubic-bezier(.22,1,.36,1)}
@@ -1935,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar">
-  <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標設定</button>
+  <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3649,14 +3651,14 @@ function countContractsIn(range) {
 }
 
 /* 進捗セクションをレンダリング */
-function renderProgressItems(containerId, calls, appts, contracts, goals) {
+function renderProgressItems(containerId, calls, appts, contracts, goals, period) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
   const items = [
-    { ico:'📞', lbl:'架電',     cur:calls,     tgt:goals.callGoal     || 200 },
-    { ico:'🌟', lbl:'アポ取得', cur:appts,     tgt:goals.apptGoal     || 20  },
-    { ico:'🏆', lbl:'新規契約', cur:contracts, tgt:goals.contractGoal || 5   },
+    { ico:'📞', lbl:'架電',     cur:calls,     tgt:goals.callGoal     || 200, metric:'call' },
+    { ico:'🌟', lbl:'アポ取得', cur:appts,     tgt:goals.apptGoal     || 20,  metric:'appt' },
+    { ico:'🏆', lbl:'新規契約', cur:contracts, tgt:goals.contractGoal || 5,   metric:'contract' },
   ];
 
   el.innerHTML = items.map(item => {
@@ -3667,11 +3669,14 @@ function renderProgressItems(containerId, calls, appts, contracts, goals) {
                 : pct <= 80  ? '#ff8800'
                 : pct <  100 ? '#ffcc00'
                 : '#00ff88';
+    const tgtCell = period
+      ? `<span class="db-prog-tgt db-prog-tgt-edit" onclick="editGoalInline('${period}','${item.metric}')" title="クリックで目標を変更"> / ${item.tgt}件 ✎</span>`
+      : `<span class="db-prog-tgt"> / ${item.tgt}件</span>`;
     return `<div class="db-prog-item${achieved ? ' db-prog-achieved' : ''}">
       <div class="db-prog-header">
         <span class="db-prog-ico">${item.ico}</span>
         <span class="db-prog-lbl">${item.lbl}</span>
-        <span class="db-prog-nums">${item.cur}<span class="db-prog-tgt"> / ${item.tgt}件</span></span>
+        <span class="db-prog-nums">${item.cur}${tgtCell}</span>
         <span class="db-prog-pct" style="color:${color}">${pct}%${achieved ? ' ✓' : ''}</span>
       </div>
       <div class="db-prog-track">
@@ -3697,7 +3702,7 @@ function renderWeeklyProgress() {
     const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
     wr.textContent = `${fmt(range.start)}（月）〜 ${fmt(range.end)}（日）`;
   }
-  renderProgressItems('db-weekly-items', countCallsIn(range), countApptsIn(range), countContractsIn(range), weeklyGoals);
+  renderProgressItems('db-weekly-items', countCallsIn(range), countApptsIn(range), countContractsIn(range), weeklyGoals, 'week');
 }
 
 function renderMonthlyProgress() {
@@ -3705,14 +3710,14 @@ function renderMonthlyProgress() {
   const now   = new Date();
   const pEl   = document.getElementById('goal-period');
   if (pEl) pEl.textContent = `${now.getFullYear()}年${now.getMonth()+1}月`;
-  renderProgressItems('db-monthly-items', countCallsIn(range), countApptsIn(range), countContractsIn(range), monthlyGoals);
+  renderProgressItems('db-monthly-items', countCallsIn(range), countApptsIn(range), countContractsIn(range), monthlyGoals, 'month');
 }
 
 function renderHalfYearProgress() {
   const { start, end, year } = getHalfYearRange();
   const hrEl = document.getElementById('db-half-range');
   if (hrEl) hrEl.textContent = `${year}年6月〜${year}年11月末`;
-  renderProgressItems('db-half-items', countCallsIn({start,end}), countApptsIn({start,end}), countContractsIn({start,end}), halfGoals);
+  renderProgressItems('db-half-items', countCallsIn({start,end}), countApptsIn({start,end}), countContractsIn({start,end}), halfGoals, 'half');
 }
 
 /* ═══ カレンダー ═══ */
@@ -4074,6 +4079,24 @@ function saveGoalSettings() {
   toast(tabLabel + '目標を更新しました', 'ok');
 }
 
+/* 進捗バーの目標数字を直接クリックして変更 */
+function editGoalInline(period, metric) {
+  const map = { week: weeklyGoals, month: monthlyGoals, half: halfGoals };
+  const goalObj = map[period];
+  if (!goalObj) return;
+  const key     = metric + 'Goal';
+  const labels  = { call:'架電', appt:'アポ取得', contract:'新規契約' };
+  const pLabels = { week:'今週', month:'今月', half:'半期' };
+  const cur = goalObj[key];
+  const input = prompt(`【${pLabels[period]}】${labels[metric]}の目標件数を入力してください`, cur);
+  if (input === null) return;
+  const v = parseInt(input, 10);
+  if (isNaN(v) || v < 0) { toast('0以上の数字を入力してください', 'err'); return; }
+  goalObj[key] = v;
+  save(); renderGoalSection(); renderDashboard3Col();
+  toast('目標を更新しました', 'ok');
+}
+
 /* ═══════════════════════════════════════ TODAY TASKS */
 function renderTodayTasks() {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
@@ -4304,6 +4327,9 @@ function addLeadsToSalesList(leads) {
   return added;
 }
 
+/* 営業リストでチェックした企業のID集合（一括削除用） */
+let salesChecked = new Set();
+
 function renderSalesList() {
   const c = document.getElementById('sales-list-container');
   if (!c) return;
@@ -4375,8 +4401,12 @@ function renderSalesList() {
     const phoneHtml = (s.phone && s.phone !== '情報なし')
       ? `<a class="call-btn" href="tel:${esc(s.phone.replace(/[^\d+\-]/g,''))}" style="font-size:.78rem">📞 ${esc(s.phone)}</a>`
       : `<span style="font-size:.72rem;color:#777">情報なし</span>`;
+    const noPhone = !(s.phone && s.phone !== '情報なし');
 
     return `<tr>
+      <td data-label="選択" style="vertical-align:top;text-align:center">
+        <input type="checkbox" class="sl-row-check" data-id="${s.id}" data-nophone="${noPhone?'1':'0'}" ${salesChecked.has(s.id)?'checked':''} onclick="toggleSalesCheck('${s.id}', this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:#fc5757">
+      </td>
       <td data-label="企業名" style="vertical-align:top">
         <strong>${esc(s.name)}</strong>
         ${s.area?`<div style="font-size:.62rem;color:var(--text-muted);margin-top:2px">${esc(s.area)}</div>`:''}
@@ -4400,9 +4430,16 @@ function renderSalesList() {
     </tr>`;
   }).join('');
 
-  c.innerHTML = `<div class="glass"><div class="tscroll">
+  c.innerHTML = `<div class="glass">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:.68rem;padding:5px 12px" onclick="selectNoPhoneSales()">📵 電話番号なしを選択</button>
+      <button class="btn btn-red btn-sm" style="font-size:.68rem;padding:5px 12px" onclick="deleteCheckedSales()">🗑 チェックした企業を削除</button>
+      <span style="font-size:.72rem;color:var(--text-muted);margin-left:auto">チェック中 <strong id="sl-check-count" style="color:#fc5757;font-family:var(--mono)">${salesChecked.size}</strong> 社</span>
+    </div>
+    <div class="tscroll">
     <table class="unified-tbl">
       <thead><tr>
+        <th style="width:34px;text-align:center"><input type="checkbox" id="sl-check-all" onclick="toggleAllSalesChecks(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#fc5757" title="表示中をすべて選択"></th>
         <th>企業名</th><th>電話番号</th><th>住所</th><th>架電日・メモ</th><th></th>
       </tr></thead>
       <tbody>${body}</tbody>
@@ -4440,14 +4477,52 @@ function salesToPipeline(id) {
 function deleteSalesRow(id) {
   if (!confirm('この企業を営業リストから削除しますか？')) return;
   salesList = salesList.filter(x => x.id !== id);
+  salesChecked.delete(id);
   save(); renderSalesList(); updateBadges();
 }
 function clearSalesList() {
   if (!salesList.length) return;
   if (!confirm('営業リストをすべて削除しますか？（検索リストや商談には影響しません）')) return;
   salesList = [];
+  salesChecked.clear();
   save(); renderSalesList(); updateBadges();
   toast('営業リストをすべて削除しました', 'ok');
+}
+
+/* ── チェックボックスによる一括削除 ── */
+function toggleSalesCheck(id, on) {
+  if (on) salesChecked.add(id); else salesChecked.delete(id);
+  updateSalesCheckCount();
+}
+function toggleAllSalesChecks(on) {
+  document.querySelectorAll('.sl-row-check').forEach(cb => {
+    cb.checked = on;
+    if (on) salesChecked.add(cb.dataset.id); else salesChecked.delete(cb.dataset.id);
+  });
+  updateSalesCheckCount();
+}
+function selectNoPhoneSales() {
+  let n = 0;
+  document.querySelectorAll('.sl-row-check').forEach(cb => {
+    if (cb.dataset.nophone === '1') { cb.checked = true; salesChecked.add(cb.dataset.id); n++; }
+  });
+  updateSalesCheckCount();
+  const allEl = document.getElementById('sl-check-all'); if (allEl) allEl.checked = false;
+  toast(n ? `電話番号なし ${n}社を選択しました` : '電話番号なしの企業はありません', n ? 'ok' : 'err');
+}
+function deleteCheckedSales() {
+  if (salesChecked.size === 0) { toast('チェックした企業がありません', 'err'); return; }
+  if (!confirm(`チェックした ${salesChecked.size}社を営業リストから削除しますか？\n（検索リストや商談には影響しません）`)) return;
+  const before = salesList.length;
+  salesList = salesList.filter(x => !salesChecked.has(x.id));
+  const removed = before - salesList.length;
+  salesChecked.clear();
+  save(); renderSalesList(); updateBadges();
+  toast(`${removed}社を削除しました`, 'ok');
+}
+function updateSalesCheckCount() {
+  const el = document.getElementById('sl-check-count');
+  if (el) el.textContent = salesChecked.size;
 }
 function exportSalesCsv() {
   if (!salesList.length) { toast('営業リストが空です', 'err'); return; }
