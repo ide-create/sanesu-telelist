@@ -3616,14 +3616,23 @@ function getThisMonthRange() {
   return { start, end };
 }
 
-/* 日付範囲内の架電数（callHistory を集計） */
+/* 日付範囲内の架電数（架電記録タブ＋営業リストの「今日 架電」を集計） */
 function countCallsIn(range) {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
   let n = 0;
+  /* ① 架電記録タブの記録 */
   callList.forEach(c => {
     (c.callHistory || []).forEach(h => {
       if (!h.date) return;
       const d = new Date(h.date);
+      if (d >= range.start && d <= range.end) n++;
+    });
+  });
+  /* ② 営業リストの「＋今日 架電」の記録 */
+  areaFilter(salesList).forEach(s => {
+    (s.calls || []).forEach(ca => {
+      if (!ca.date) return;
+      const d = new Date(ca.date);
       if (d >= range.start && d <= range.end) n++;
     });
   });
@@ -4256,8 +4265,9 @@ function setKpi(id, val) {
 }
 function updateKPIs() {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
-  /* 総架電数 = callHistory の合計件数 */
-  const totalCalls = callList.reduce((sum, c) => sum + (c.callHistory ? c.callHistory.length : 0), 0);
+  /* 総架電数 = 架電記録タブ + 営業リストの「今日 架電」の合計件数 */
+  const totalCalls = callList.reduce((sum, c) => sum + (c.callHistory ? c.callHistory.length : 0), 0)
+                   + areaFilter(salesList).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0);
   setKpi('s-total', totalCalls);
 
   /* アポ取得率 = アポ取得/成約 ÷ 架電済み企業数 */
@@ -4453,7 +4463,7 @@ function addSalesCallToday(id) {
   if (!s) return;
   if (!s.calls) s.calls = [];
   s.calls.push({ date: getTodayStr(), memo: '' });
-  save(); renderSalesList();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
 }
 function updateSalesMemo(id, idx, val) {
   const s = salesList.find(x => x.id === id);
@@ -4465,7 +4475,7 @@ function deleteSalesCall(id, idx) {
   const s = salesList.find(x => x.id === id);
   if (!s || !s.calls) return;
   s.calls.splice(idx, 1);
-  save(); renderSalesList();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
 }
 function salesToPipeline(id) {
   const s = salesList.find(x => x.id === id);
@@ -4478,14 +4488,14 @@ function deleteSalesRow(id) {
   if (!confirm('この企業を営業リストから削除しますか？')) return;
   salesList = salesList.filter(x => x.id !== id);
   salesChecked.delete(id);
-  save(); renderSalesList(); updateBadges();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
 }
 function clearSalesList() {
   if (!salesList.length) return;
   if (!confirm('営業リストをすべて削除しますか？（検索リストや商談には影響しません）')) return;
   salesList = [];
   salesChecked.clear();
-  save(); renderSalesList(); updateBadges();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
   toast('営業リストをすべて削除しました', 'ok');
 }
 
@@ -4517,7 +4527,7 @@ function deleteCheckedSales() {
   salesList = salesList.filter(x => !salesChecked.has(x.id));
   const removed = before - salesList.length;
   salesChecked.clear();
-  save(); renderSalesList(); updateBadges();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
   toast(`${removed}社を削除しました`, 'ok');
 }
 function updateSalesCheckCount() {
