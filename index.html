@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 商談入力版④</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 アポ日統一版⑤</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2991,7 +2991,7 @@ tr.row-contracted td:first-child{opacity:.55}
     <div class="m-body">
       <div class="co-box"><strong id="sa-company">—</strong></div>
       <div class="field"><label>[ 担当者名 ]</label><input type="text" id="sa-contact" placeholder="例：採用ご担当 山田様"></div>
-      <div class="field"><label>[ 商談日時 ]</label><input type="datetime-local" id="sa-meeting" style="color-scheme:dark"></div>
+      <div class="field"><label>[ アポイント日 ]</label><input type="datetime-local" id="sa-meeting" style="color-scheme:dark"></div>
     </div>
     <div class="m-foot">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-sales-appt')">キャンセル</button>
@@ -7720,7 +7720,7 @@ function buildPsTab1(c) {
       <input class="p2-inp" id="ps1-phone" value="${esc(c.phone||'')}" placeholder="0565-XX-XXXX">
     </div>
     <div class="p2-field">
-      <label>📅 次回訪問日時</label>
+      <label>📅 アポイント日</label>
       <input class="p2-inp" type="datetime-local" id="ps1-meeting" value="${c.meetingDate||''}" style="color-scheme:dark">
     </div>
     <div class="p2-field">
