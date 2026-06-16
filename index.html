@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 架電反映版②</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 架電結果タブ版③</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4341,6 +4341,35 @@ function addLeadsToSalesList(leads) {
 /* 営業リストでチェックした企業のID集合（一括削除用） */
 let salesChecked = new Set();
 
+/* 架電結果（ワンタップ記録用）。recall:true は次回また架電できる結果 */
+const SALES_OUTCOMES = [
+  { key:'時間改めて',   label:'時間改めて',   color:'#f0a020', recall:true  },
+  { key:'担当者名のみ', label:'担当者名のみ', color:'#3b82f6', recall:true  },
+  { key:'タイミング',   label:'タイミング',   color:'#14b8a6', recall:true  },
+  { key:'電話に出ない', label:'電話に出ない', color:'#8a94a6', recall:true  },
+  { key:'派遣NG',       label:'派遣NG',       color:'#ef4444', recall:false },
+  { key:'新規NG',       label:'新規NG',       color:'#b91c1c', recall:false },
+];
+function salesStatusColor(st){
+  if (st === '商談中') return '#9f7aea';
+  const o = SALES_OUTCOMES.find(x => x.key === st);
+  return o ? o.color : '#8a94a6';
+}
+/* 営業リストの結果フィルタ（タブ）。'all' は全件 */
+let salesStatusFilter = 'all';
+function setSalesStatusFilter(st){ salesStatusFilter = st; renderSalesList(); }
+
+/* 架電結果をワンタップで記録（＝架電1件＋結果タグ付け） */
+function setSalesOutcome(id, outcome){
+  const s = salesList.find(x => x.id === id);
+  if (!s) return;
+  if (!s.calls) s.calls = [];
+  s.calls.push({ date: getTodayStr(), memo: outcome });
+  s.status = outcome;
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
+  toast(outcome + ' で記録しました', 'ok');
+}
+
 function renderSalesList() {
   const c = document.getElementById('sales-list-container');
   if (!c) return;
@@ -4380,13 +4409,26 @@ function renderSalesList() {
   const selArea = areaSel ? areaSel.value : 'all';
 
   const kw = (document.getElementById('sl-search')?.value || '').trim();
-  let rows = salesList.slice();
+  /* エリア＋キーワードで絞った母集団（タブの件数の母数） */
+  let base = salesList.slice();
   if (selArea && selArea !== 'all') {
-    rows = rows.filter(s => (s.area || '（エリア不明）') === selArea);
+    base = base.filter(s => (s.area || '（エリア不明）') === selArea);
   }
   if (kw) {
-    rows = rows.filter(s => (s.name+' '+s.address).indexOf(kw) !== -1);
+    base = base.filter(s => (s.name+' '+s.address).indexOf(kw) !== -1);
   }
+  /* 各結果タブの件数 */
+  const inPipe = s => pipeline.some(p => p.company === s.name);
+  const statusCount = (st) =>
+      st === 'all'    ? base.length
+    : st === '未架電' ? base.filter(s => !s.status).length
+    : st === '商談中' ? base.filter(inPipe).length
+    :                   base.filter(s => s.status === st).length;
+  /* 選択中のタブで絞り込み */
+  let rows = base.slice();
+  if (salesStatusFilter === '未架電')      rows = rows.filter(s => !s.status);
+  else if (salesStatusFilter === '商談中') rows = rows.filter(inPipe);
+  else if (salesStatusFilter !== 'all')    rows = rows.filter(s => s.status === salesStatusFilter);
   /* 住所順に並べる（同じ市・町が隣り合う） */
   rows.sort((a, b) => (a.address || '').localeCompare(b.address || '', 'ja'));
 
@@ -4420,17 +4462,21 @@ function renderSalesList() {
       </td>
       <td data-label="企業名" style="vertical-align:top">
         <strong>${esc(s.name)}</strong>
+        ${s.status?`<div style="margin-top:3px"><span style="font-size:.58rem;padding:1px 8px;border-radius:8px;background:${salesStatusColor(s.status)}22;color:${salesStatusColor(s.status)};border:1px solid ${salesStatusColor(s.status)}66;font-weight:700">${esc(s.status)}</span></div>`:''}
         ${s.area?`<div style="font-size:.62rem;color:var(--text-muted);margin-top:2px">${esc(s.area)}</div>`:''}
         ${s.url?`<div style="margin-top:2px"><a href="${esc(s.url)}" target="_blank" rel="noopener" style="font-size:.6rem;color:var(--blue-lt);text-decoration:none">🌐 サイト</a></div>`:''}
       </td>
       <td data-label="電話番号" style="vertical-align:top">${phoneHtml}</td>
       <td data-label="住所" style="vertical-align:top"><span style="font-size:.74rem">${esc(s.address)||'—'}</span></td>
-      <td data-label="架電日・メモ" style="vertical-align:top;min-width:240px">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-          <button class="btn btn-cyan btn-sm" style="font-size:.68rem;padding:4px 12px" onclick="addSalesCallToday('${s.id}')">＋ 今日 架電</button>
+      <td data-label="架電結果・メモ" style="vertical-align:top;min-width:260px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+          ${SALES_OUTCOMES.map(o => {
+            const on = s.status === o.key;
+            return `<button onclick="setSalesOutcome('${s.id}','${o.key}')" title="${o.key}で記録（架電1件）" style="font-size:.62rem;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid ${o.color};background:${on?o.color:'transparent'};color:${on?'#fff':o.color};font-weight:${on?700:600}">${o.label}${on?' ✓':''}</button>`;
+          }).join('')}
           ${pipeline.some(p => p.company === s.name)
-            ? `<span style="font-size:.7rem;color:var(--cyan);font-weight:700;align-self:center">🤝 商談中 ✓</span>`
-            : `<button class="btn btn-sm" style="background:rgba(159,122,234,.2);border:1px solid rgba(159,122,234,.7);color:#c4a8ff;font-size:.68rem;padding:4px 12px" onclick="salesToPipeline('${s.id}')">🤝 商談へ</button>`}
+            ? `<span style="font-size:.66rem;color:#c4a8ff;font-weight:700;align-self:center">🤝 商談中 ✓</span>`
+            : `<button onclick="salesToPipeline('${s.id}')" title="商談へ移す（架電1件）" style="font-size:.62rem;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid #9f7aea;background:transparent;color:#c4a8ff;font-weight:600">🤝 商談へ</button>`}
         </div>
         ${callsHtml}
       </td>
@@ -4441,7 +4487,28 @@ function renderSalesList() {
     </tr>`;
   }).join('');
 
+  const statusTabs = [
+    { key:'all',          label:'すべて' },
+    { key:'未架電',       label:'未架電' },
+    { key:'時間改めて',   label:'時間改めて' },
+    { key:'担当者名のみ', label:'担当者名のみ' },
+    { key:'タイミング',   label:'タイミング' },
+    { key:'電話に出ない', label:'電話に出ない' },
+    { key:'派遣NG',       label:'派遣NG' },
+    { key:'新規NG',       label:'新規NG' },
+    { key:'商談中',       label:'商談中' },
+  ];
+  const tabBarHtml = statusTabs.map(t => {
+    const n = statusCount(t.key);
+    const active = salesStatusFilter === t.key;
+    const ac = t.key === 'all' ? 'var(--cyan)' : t.key === '未架電' ? '#8a94a6' : salesStatusColor(t.key);
+    return `<button onclick="setSalesStatusFilter('${t.key}')" style="font-size:.66rem;padding:5px 11px;border-radius:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto;border:1px solid ${active?ac:'var(--border)'};background:${active?ac:'transparent'};color:${active?'#fff':'var(--text-muted)'};font-weight:${active?700:500}">${t.label} <span style="opacity:.75">${n}</span></button>`;
+  }).join('');
+
   c.innerHTML = `<div class="glass">
+    <div style="display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch">
+      ${tabBarHtml}
+    </div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
       <button class="btn btn-sm" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:.68rem;padding:5px 12px" onclick="selectNoPhoneSales()">📵 電話番号なしを選択</button>
       <button class="btn btn-red btn-sm" style="font-size:.68rem;padding:5px 12px" onclick="deleteCheckedSales()">🗑 チェックした企業を削除</button>
@@ -4451,7 +4518,7 @@ function renderSalesList() {
     <table class="unified-tbl">
       <thead><tr>
         <th style="width:34px;text-align:center"><input type="checkbox" id="sl-check-all" onclick="toggleAllSalesChecks(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#fc5757" title="表示中をすべて選択"></th>
-        <th>企業名</th><th>電話番号</th><th>住所</th><th>架電日・メモ</th><th></th>
+        <th>企業名</th><th>電話番号</th><th>住所</th><th>架電結果・メモ</th><th></th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
@@ -4482,8 +4549,13 @@ function salesToPipeline(id) {
   const s = salesList.find(x => x.id === id);
   if (!s) return;
   if (pipeline.some(p => p.company === s.name)) { toast('すでに商談に登録済みです', 'ok'); return; }
+  const today = getTodayStr();
+  if (!s.calls) s.calls = [];
+  if (!s.calls.some(ca => ca.date === today)) s.calls.push({ date: today, memo: 'アポ獲得→商談へ' });
+  s.status = '商談中';
   syncPipeline(s.name, s.phone, 'appointment', '');
-  renderSalesList();
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
+  toast(s.name + ' を商談へ移しました', 'ok');
 }
 function deleteSalesRow(id) {
   if (!confirm('この企業を営業リストから削除しますか？')) return;
