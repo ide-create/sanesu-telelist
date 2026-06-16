@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 架電結果タブ版③</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/16 商談入力版④</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2977,6 +2977,25 @@ tr.row-contracted td:first-child{opacity:.55}
     <div class="m-foot">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-goals')">キャンセル</button>
       <button class="btn btn-cyan btn-sm" onclick="saveGoalSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 商談へ登録（営業リストから） -->
+<div class="overlay" id="ov-sales-appt">
+  <div class="modal" style="max-width:420px">
+    <div class="m-head">
+      <h3>🤝 商談へ登録</h3>
+      <button class="xbtn" onclick="closeModal('ov-sales-appt')">✕</button>
+    </div>
+    <div class="m-body">
+      <div class="co-box"><strong id="sa-company">—</strong></div>
+      <div class="field"><label>[ 担当者名 ]</label><input type="text" id="sa-contact" placeholder="例：採用ご担当 山田様"></div>
+      <div class="field"><label>[ 商談日時 ]</label><input type="datetime-local" id="sa-meeting" style="color-scheme:dark"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-sales-appt')">キャンセル</button>
+      <button class="btn btn-cyan btn-sm" onclick="confirmSalesAppt()">商談へ登録</button>
     </div>
   </div>
 </div>
@@ -4545,17 +4564,34 @@ function deleteSalesCall(id, idx) {
   s.calls.splice(idx, 1);
   save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
 }
+let _salesApptId = null;
 function salesToPipeline(id) {
   const s = salesList.find(x => x.id === id);
   if (!s) return;
   if (pipeline.some(p => p.company === s.name)) { toast('すでに商談に登録済みです', 'ok'); return; }
+  _salesApptId = id;
+  const nameEl = document.getElementById('sa-company'); if (nameEl) nameEl.textContent = s.name;
+  const ce = document.getElementById('sa-contact'); if (ce) ce.value = '';
+  const me = document.getElementById('sa-meeting'); if (me) me.value = '';
+  openModal('ov-sales-appt');
+}
+function confirmSalesAppt() {
+  const s = salesList.find(x => x.id === _salesApptId);
+  if (!s) { closeModal('ov-sales-appt'); return; }
+  const contact = (document.getElementById('sa-contact')?.value || '').trim();
+  const meeting = document.getElementById('sa-meeting')?.value || '';
+  /* 架電1件を記録（今日まだ無ければ） */
   const today = getTodayStr();
   if (!s.calls) s.calls = [];
   if (!s.calls.some(ca => ca.date === today)) s.calls.push({ date: today, memo: 'アポ獲得→商談へ' });
   s.status = '商談中';
-  syncPipeline(s.name, s.phone, 'appointment', '');
-  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
-  toast(s.name + ' を商談へ移しました', 'ok');
+  /* 商談へ登録（担当者名つき）→ 商談日時をセット */
+  syncPipeline(s.name, s.phone, 'appointment', contact);
+  const p = pipeline.find(x => x.company === s.name);
+  if (p) p.meetingDate = meeting;
+  save();
+  renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges(); renderPipeline(); renderSchedule();
+  closeModal('ov-sales-appt');
 }
 function deleteSalesRow(id) {
   if (!confirm('この企業を営業リストから削除しますか？')) return;
