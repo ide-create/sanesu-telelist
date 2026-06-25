@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 手動商談追加版⑪</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談ステージ変更版⑫</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2481,9 +2481,11 @@ tr.row-contracted td:first-child{opacity:.55}
         <div class="field">
           <label>[ ステージ ]</label>
           <select id="pm-stage" onchange="onPmStageChange()">
-            <option value="appt">🟡 アポ取得（訪問・面談予定）</option>
-            <option value="proposal">🟠 商談中（提案・交渉中）</option>
-            <option value="contract">🏆 新規契約</option>
+            <option value="appt">🆕 アポイント取得</option>
+            <option value="talking">🤝 商談</option>
+            <option value="contract">🎉 契約</option>
+            <option value="hold">⭐ 見込み企業</option>
+            <option value="lost">🚫 新規NG</option>
           </select>
         </div>
         <div class="field">
@@ -2630,9 +2632,11 @@ tr.row-contracted td:first-child{opacity:.55}
           <div class="field">
             <label>[ ステージ ]</label>
             <select id="pd-stage" onchange="onPdStageChange()">
-              <option value="appt">🟡 アポ取得（訪問・面談予定）</option>
-              <option value="proposal">🟠 商談中（提案・交渉中）</option>
-              <option value="contract">🏆 新規契約</option>
+              <option value="appt">🆕 アポイント取得</option>
+              <option value="talking">🤝 商談</option>
+              <option value="contract">🎉 契約</option>
+              <option value="hold">⭐ 見込み企業</option>
+              <option value="lost">🚫 新規NG</option>
             </select>
           </div>
           <div class="field">
@@ -2755,10 +2759,10 @@ tr.row-contracted td:first-child{opacity:.55}
         <label>[ 商談結果 ]（必須）</label>
         <div class="res-type-grid">
           <button class="res-type-btn" id="res-btn-contract" onclick="selectResultType('contract')">🎉<br>契約獲得</button>
-          <button class="res-type-btn" id="res-btn-lost"     onclick="selectResultType('lost')">❌<br>失注</button>
+          <button class="res-type-btn" id="res-btn-lost"     onclick="selectResultType('lost')">🚫<br>新規NG</button>
           <button class="res-type-btn" id="res-btn-talking"  onclick="selectResultType('talking')">🤝<br>継続商談（再訪問あり）</button>
           <button class="res-type-btn" id="res-btn-revisit"  onclick="selectResultType('revisit')">📅<br>再訪問が必要</button>
-          <button class="res-type-btn" id="res-btn-hold"     onclick="selectResultType('hold')">⏸<br>いったん保留</button>
+          <button class="res-type-btn" id="res-btn-hold"     onclick="selectResultType('hold')">⭐<br>見込み企業</button>
         </div>
       </div>
       <!-- 契約獲得フォーム -->
@@ -7393,11 +7397,11 @@ const STAGE_COLORS = {
 
 /* ─── PIPELINE 3列定義 ─── */
 const PIPE_STAGES = [
-  {id:'appt',    icon:'🆕', label:'アポ取得', color:'rgba(66,153,225,.65)'},
-  {id:'talking', icon:'🤝', label:'商談中',   color:'rgba(159,122,234,.65)'},
-  {id:'contract',icon:'🎉', label:'契約',     color:'rgba(0,255,136,.7)'},
-  {id:'lost',    icon:'🚫', label:'失注',     color:'rgba(245,101,101,.6)'},
-  {id:'hold',    icon:'⏸', label:'保留',     color:'rgba(237,200,90,.6)'},
+  {id:'appt',    icon:'🆕', label:'アポイント取得', color:'rgba(66,153,225,.65)'},
+  {id:'talking', icon:'🤝', label:'商談',         color:'rgba(159,122,234,.65)'},
+  {id:'contract',icon:'🎉', label:'契約',         color:'rgba(0,255,136,.7)'},
+  {id:'lost',    icon:'🚫', label:'新規NG',       color:'rgba(245,101,101,.6)'},
+  {id:'hold',    icon:'⭐', label:'見込み企業',    color:'rgba(237,200,90,.6)'},
 ];
 
 let p2OpenId   = null;  // 開いているサイドパネルの商談ID
@@ -8206,7 +8210,7 @@ function openPipeDetail(id) {
   editPipeDetailId = id;
 
   document.getElementById('pd-company-name').textContent = card.company;
-  const SL = { appt:'🟡 アポ取得', proposal:'🟠 商談中', contract:'🏆 新規契約' };
+  const SL = { appt:'🆕 アポイント取得', talking:'🤝 商談', proposal:'🤝 商談', contract:'🎉 契約', hold:'⭐ 見込み企業', lost:'🚫 新規NG' };
   document.getElementById('pd-stage-badge').innerHTML =
     `<span class="sbadge" style="font-size:.68rem;letter-spacing:1px">${SL[card.stage]||card.stage}</span>`;
 
@@ -8604,7 +8608,7 @@ function generateWeeklyReport(mode) {
       });
     });
     const appts     = pipeline.filter(p => { const d = pd(p.createdAt); return inW(d, r); });
-    const nego      = pipeline.filter(p => { const d = pd(p.createdAt); return inW(d, r) && p.stage === 'proposal'; });
+    const nego      = pipeline.filter(p => { const d = pd(p.createdAt); return inW(d, r) && (p.stage === 'proposal' || p.stage === 'talking'); });
     const contracts = pipeline.filter(p => { const d = pd(p.createdAt); return inW(d, r) && p.stage === 'contract'; });
     const apptRate  = calls > 0 ? (appts.length / calls * 100).toFixed(1) : null;
     const contRate  = appts.length > 0 ? (contracts.length / appts.length * 100).toFixed(1) : null;
