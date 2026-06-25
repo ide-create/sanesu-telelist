@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 総架電数修正版⑧</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談削除追加版⑨</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -7563,6 +7563,8 @@ function buildP2Card(c, stage) {
     </div>
     ${resultBtn}
     <button class="p2-card-move-btn" onclick="openMoveModal('${c.id}');event.stopPropagation()">⇄ ステージを移動</button>
+    <button onclick="deleteDealCard('${c.id}');event.stopPropagation()" title="この商談を削除"
+      style="width:100%;margin-top:5px;background:rgba(245,101,101,.08);border:1px solid rgba(245,101,101,.3);color:rgba(245,101,101,.9);border-radius:7px;padding:5px;font-size:.66rem;font-weight:600;cursor:pointer">🗑 削除</button>
   </div>`;
 }
 
@@ -8421,6 +8423,17 @@ function deletePipeFromList(id) {
   pipeline = pipeline.filter(p => p.id !== id);
   save(); renderPipeline(); renderContractList(); updateKPIs(); updateBadges();
   toast('削除しました');
+}
+
+/* 商談カードを削除（テストデータや誤登録の削除用） */
+function deleteDealCard(id) {
+  const list = (typeof pipeline !== 'undefined' ? pipeline : []);
+  const p = list.find(x => x && x.id === id);
+  const name = (p && p.company) ? p.company : 'この商談';
+  if (!confirm(`「${name}」を商談管理から削除しますか？\n（この操作は元に戻せません）`)) return;
+  pipeline = pipeline.filter(x => x.id !== id);
+  save(); renderPipeline(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges();
+  toast('商談を削除しました', 'ok');
 }
 
 function openNewContractModal() {
