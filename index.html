@@ -1394,8 +1394,8 @@ tr.row-contracted td:first-child{opacity:.55}
 .appt-toast-link{background:none;border:none;color:#63b3ed;font-size:.8rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0;transition:color .15s}
 .appt-toast-link:hover{color:#fff}
 .pipe2-hint{padding:8px 14px;font-size:.75rem;color:rgba(255,255,255,.35);letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,.05)}
-.pipe2-add-manual{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.38);font-size:.7rem;font-family:inherit;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s}
-.pipe2-add-manual:hover{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.65)}
+.pipe2-add-manual{background:rgba(46,99,166,.16);border:1px solid rgba(78,130,196,.55);color:#9fc0ea;font-size:.72rem;font-weight:600;font-family:inherit;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all .15s}
+.pipe2-add-manual:hover{background:rgba(46,99,166,.3);border-color:rgba(78,130,196,.85);color:#cfe2f6}
 @media(max-width:768px){
   .pipe2-side{position:fixed!important;right:0;top:0;bottom:0;z-index:110;width:0!important;max-width:95vw}
   .pipe2-side.open{width:340px!important}
@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談削除修正版⑩</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 手動商談追加版⑪</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2275,7 +2275,7 @@ tr.row-contracted td:first-child{opacity:.55}
           <option value="amount">想定金額順</option>
         </select>
       </div>
-      <button class="pipe2-add-manual" onclick="openPipeModal(null)">+ 手動で商談追加（名刺等から）</button>
+      <button class="pipe2-add-manual" onclick="openPipeModal(null)">＋ 手動で商談を追加（飛び込み・紹介・名刺等）</button>
     </div>
 
     <!-- KPIバー -->
@@ -8028,7 +8028,7 @@ function shareBarHtml(sanesu, total) {
   </div>`;
 }
 
-function renderPipeline() {
+function renderPipelineOld() {
   ['appt','proposal','contract'].forEach(stage => {
     const cards = pipeline.filter(p => p.stage === stage);
     const cntEl = document.getElementById('cnt-' + stage);
@@ -8187,14 +8187,14 @@ function savePipeModal() {
       ...contractData
     });
   }
-  save(); renderPipeline(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges(); closeModal('ov-pipe');
+  save(); renderPipelineV2(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges(); closeModal('ov-pipe');
   toast('保存しました', 'ok');
 }
 
 function deletePipeCard() {
   if (!confirm('このカードを削除しますか？')) return;
   pipeline = pipeline.filter(p => p.id !== editPipeId);
-  save(); renderPipeline(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges(); closeModal('ov-pipe');
+  save(); renderPipelineV2(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges(); closeModal('ov-pipe');
   toast('削除しました');
 }
 
