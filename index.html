@@ -1901,13 +1901,13 @@ tr.row-contracted td:first-child{opacity:.55}
     <div class="kpi-icon">📈</div>
     <div class="kpi-val" id="s-appt-rate">—</div>
     <div class="kpi-lbl">アポ取得率</div>
-    <div class="kpi-sub">アポ÷架電済</div>
+    <div class="kpi-sub">アポ÷総架電数</div>
   </div>
   <div class="kpi-card kc-apt">
     <div class="kpi-icon">⭐</div>
     <div class="kpi-val" id="s-contracted">0</div>
-    <div class="kpi-lbl">成約数</div>
-    <div class="kpi-sub">成約済み企業数</div>
+    <div class="kpi-lbl">アポ取得数</div>
+    <div class="kpi-sub">商談管理の件数</div>
   </div>
   <div class="kpi-card kc-con">
     <div class="kpi-icon">📊</div>
@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談ステージ変更版⑫</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 KPI計算修正版⑬</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4309,14 +4309,12 @@ function updateKPIs() {
                    + areaFilter(salesCallArchive).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0);
   setKpi('s-total', totalCalls);
 
-  /* アポ取得率 = アポ取得/成約 ÷ 架電済み企業数 */
-  const calledCompanies = callList.filter(c => c.status !== 'uncalled' && !c.hidden).length;
-  const apts = callList.filter(c => c.status === 'appointment' || c.status === 'contracted').length;
-  const apptRateStr = calledCompanies > 0 ? Math.round(apts / calledCompanies * 100) + '%' : '—';
+  /* アポ取得率 = アポ取得数（商談管理の件数）÷ 総架電数 */
+  const apptRateStr = totalCalls > 0 ? Math.round(pipeline.length / totalCalls * 100) + '%' : '—';
   setKpi('s-appt-rate', apptRateStr);
 
-  const con = callList.filter(c => c.status === 'contracted').length;
-  setKpi('s-contracted', con);
+  /* アポ取得数 = 商談管理（パイプライン）の総件数 */
+  setKpi('s-contracted', pipeline.length);
 
   const contracts = pipeline.filter(p => p.stage === 'contract');
   const winRate = pipeline.length > 0 ? Math.round(contracts.length / pipeline.length * 100) : null;
