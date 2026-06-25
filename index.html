@@ -1937,7 +1937,7 @@ tr.row-contracted td:first-child{opacity:.55}
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談削除追加版⑨</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 商談削除修正版⑩</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -8380,7 +8380,7 @@ function savePipeDetail() {
 function deletePipeDetail() {
   if (!confirm('この商談カードを削除しますか？')) return;
   pipeline = pipeline.filter(p => p.id !== editPipeDetailId);
-  save(); renderPipeline(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges();
+  save(); renderPipelineV2(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges();
   closeModal('ov-pipe-detail');
   toast('削除しました');
 }
@@ -8432,7 +8432,7 @@ function deleteDealCard(id) {
   const name = (p && p.company) ? p.company : 'この商談';
   if (!confirm(`「${name}」を商談管理から削除しますか？\n（この操作は元に戻せません）`)) return;
   pipeline = pipeline.filter(x => x.id !== id);
-  save(); renderPipeline(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges();
+  save(); renderPipelineV2(); renderContractList(); updateKPIs(); renderSchedule(); updateBadges();
   toast('商談を削除しました', 'ok');
 }
 
