@@ -1781,6 +1781,19 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
 .login-input:focus{border-bottom-color:#ff3df0;box-shadow:0 1px 0 0 rgba(255,61,240,0.55),0 7px 20px -8px rgba(255,61,240,0.40)}
 .login-input.typing{border-bottom-color:rgba(255,61,240,0.50)}
 
+/* ===== GUEST READ-ONLY MODE ===== */
+.login-guest-btn{height:44px;margin-top:14px;letter-spacing:3px;font-size:11px;text-transform:none;background:transparent;border:1px solid rgba(0,245,255,0.28);color:rgba(180,230,255,0.82);box-shadow:none;opacity:0;animation:lRiseIn .6s 3.6s ease forwards}
+.login-guest-btn:hover:not(.loading){background:rgba(0,245,255,0.06);border-color:rgba(0,245,255,0.6);color:#9beaff;box-shadow:0 0 22px rgba(0,245,255,0.16)}
+.guest-banner{position:fixed;top:12px;right:16px;z-index:9000;display:flex;align-items:center;gap:7px;padding:8px 15px;border-radius:22px;font-size:11px;letter-spacing:1.5px;font-weight:700;color:#0a0414;background:linear-gradient(90deg,#ff3df0,#9d4dff,#00f5ff);box-shadow:0 4px 20px rgba(255,61,240,0.45);pointer-events:none}
+body.guest-mode button[onclick*="save"],body.guest-mode button[onclick*="Save"],
+body.guest-mode button[onclick*="delete"],body.guest-mode button[onclick*="Delete"],
+body.guest-mode button[onclick*="remove"],body.guest-mode button[onclick*="Remove"],
+body.guest-mode button[onclick*="add"],body.guest-mode button[onclick*="Add"],
+body.guest-mode button[onclick*="edit"],body.guest-mode button[onclick*="Edit"],
+body.guest-mode button[onclick*="create"],body.guest-mode button[onclick*="Create"],
+body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
+  opacity:.32 !important;pointer-events:none !important;filter:grayscale(.55) !important;cursor:not-allowed !important}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1789,8 +1802,9 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
 <script>
 (function() {
   'use strict';
-  var PW = 'sanesu2024';
+  var PW = 'sanesu24';
   var AUTH_KEY = 'auth';
+  var GUEST_KEY = 'guest';
 
   function hideLogin() {
     var ls = document.getElementById('login-screen');
@@ -1830,8 +1844,39 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
     }
   };
 
+  var _guestApplied = false;
+  window.applyGuestMode = function() {
+    if (_guestApplied) return;
+    _guestApplied = true;
+    document.body.classList.add('guest-mode');
+    // 閲覧専用：アプリデータの保存を全面ブロック（永続変更させない）
+    try {
+      var _set = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = function(k, v) {
+        if (/^(tl_|sanesu_)/.test(k)) return;
+        return _set(k, v);
+      };
+    } catch (e) {}
+    // モード表示バッジ
+    if (!document.getElementById('guest-banner')) {
+      var b = document.createElement('div');
+      b.id = 'guest-banner';
+      b.className = 'guest-banner';
+      b.innerHTML = '<span>\uD83D\uDC41</span> \u30b2\u30b9\u30c8\u95b2\u89a7\u30e2\u30fc\u30c9\uff08\u7de8\u96c6\u3067\u304d\u307e\u305b\u3093\uff09';
+      document.body.appendChild(b);
+    }
+  };
+  window.guestLogin = function() {
+    sessionStorage.setItem(AUTH_KEY, '1');
+    sessionStorage.setItem(GUEST_KEY, '1');
+    window.applyGuestMode();
+    hideLogin();
+    if (typeof bootApp === 'function') bootApp();
+  };
+
   window.doLogout = function() {
     sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(GUEST_KEY);
     location.reload();
   };
 
@@ -1840,6 +1885,7 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
 
   window.addEventListener('load', function() {
     if (sessionStorage.getItem(AUTH_KEY) === '1') {
+      if (sessionStorage.getItem(GUEST_KEY) === '1') window.applyGuestMode();
       hideLogin();
       if (typeof bootApp === 'function') bootApp();
     }
@@ -1877,6 +1923,9 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
       <button class="login-btn" id="login-btn" onclick="login()">
         <span class="lbtn-text">LOGIN</span>
         <span class="lbtn-spinner"></span>
+      </button>
+      <button class="login-btn login-guest-btn" id="guest-btn" type="button" onclick="guestLogin()">
+        <span>👁 ゲストとして閲覧</span>
       </button>
     </div>
   </div>
@@ -2052,7 +2101,7 @@ header{background:linear-gradient(180deg,rgba(18,8,34,0.86),rgba(8,4,14,0.74));b
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 シンセウェーブ版⑱</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 ゲスト追加版⑲</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
