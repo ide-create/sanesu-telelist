@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉟</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 KPI合算版㊱</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4452,20 +4452,17 @@ function updateKPIs() {
                    + callList.reduce((sum, c) => sum + (c.callHistory ? c.callHistory.length : 0), 0)
                    + areaFilter(salesList).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0)
                    + areaFilter(salesCallArchive).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0);
-  setKpi('s-total', totalCalls);
-
-  /* アポ取得率 = アポ取得数（商談管理の件数）÷ 総架電数 */
-  const apptRateStr = totalCalls > 0 ? Math.round(pipeline.length / totalCalls * 100) + '%' : '—';
-  setKpi('s-appt-rate', apptRateStr);
-
-  /* アポ取得数 = 商談管理（パイプライン）の総件数 */
-  setKpi('s-contracted', pipeline.length);
-
+  /* 管理者は他メンバーのクラウド分を合算（自分の分はローカル即時反映） */
+  var _d = (isAdminUser() && window._kpiDelta) ? window._kpiDelta : {calls:0,appt:0,contract:0};
+  var _tCalls = totalCalls + (_d.calls||0);
+  var _tAppt  = pipeline.length + (_d.appt||0);
   const contracts = pipeline.filter(p => p.stage === 'contract');
-  const winRate = pipeline.length > 0 ? Math.round(contracts.length / pipeline.length * 100) : null;
-  setKpi('s-win-rate', winRate !== null ? winRate + '%' : '—');
-
-  setKpi('s-contract-count', contracts.length);
+  var _tCon   = contracts.length + (_d.contract||0);
+  setKpi('s-total', _tCalls);
+  setKpi('s-appt-rate', _tCalls > 0 ? Math.round(_tAppt / _tCalls * 100) + '%' : '—');
+  setKpi('s-contracted', _tAppt);
+  setKpi('s-win-rate', _tAppt > 0 ? Math.round(_tCon / _tAppt * 100) + '%' : '—');
+  setKpi('s-contract-count', _tCon);
 
   const totalStaff = contracts.reduce((s, c) => s + (c.sanesuStaff || 0), 0);
   setKpi('s-total-staff', totalStaff);
@@ -9501,6 +9498,19 @@ function buildAdminAggHtml(events){
   return head+cards+memberTbl+areaTbl+conTbl;
 }
 function isAdminUser(){ return !!(window.FB && window.FB.user && window.FB.user.email===window.ADMIN_EMAIL); }
+window._kpiDelta = {calls:0,appt:0,nego:0,contract:0};
+var _kpiFetching=false;
+function refreshAdminKpiBoard(){
+  if(!isAdminUser()||!window._db||_kpiFetching) return;
+  _kpiFetching=true;
+  window._db.collection('activity').get().then(function(snap){
+    var others=[]; snap.forEach(function(d){ var e=d.data(); if((e.email||'')!==window.ADMIN_EMAIL) others.push(e); });
+    var m=_aggMetrics(others);
+    window._kpiDelta={calls:m.calls,appt:m.appt,nego:m.nego,contract:m.contract};
+    _kpiFetching=false;
+    if(typeof updateKPIs==='function') updateKPIs();
+  }).catch(function(e){ _kpiFetching=false; console.error(e); });
+}
 function _normArea(a){ return (['愛知','三重','岐阜','静岡'].indexOf(a)!==-1)?a:'愛知'; }
 function fbMigrateMine(){
   if(!isAdminUser()||!window._db){ toast('管理者のみ実行できます','err'); return; }
@@ -9592,6 +9602,7 @@ bootApp = function() {
   const notice = document.getElementById('api-key-notice');
   if (notice) notice.style.display = googleApiKey ? 'none' : 'block';
   try { goTab('sl'); } catch(e) {}
+  try { if(isAdminUser()){ refreshAdminKpiBoard(); if(!window.__kpiTimer) window.__kpiTimer=setInterval(refreshAdminKpiBoard, 60000); } } catch(e){}
 };
 </script>
 </body>
