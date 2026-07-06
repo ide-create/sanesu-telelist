@@ -1961,11 +1961,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
   </div>
   <div class="sb-nav">
     <div class="sb-section">MENU</div>
-    <button class="sb-item active" id="sbtn-r" onclick="goTab('r');closeSidebar()">
-      <span class="sb-icon">🔍</span><span class="sb-label">検索・リスト</span>
-      <span class="sb-badge" id="cnt-r">0</span>
-    </button>
-    <button class="sb-item" id="sbtn-sl" onclick="goTab('sl');closeSidebar()">
+    <button class="sb-item active" id="sbtn-sl" onclick="goTab('sl');closeSidebar()">
       <span class="sb-icon">📒</span><span class="sb-label">営業リスト</span>
       <span class="sb-badge" id="cnt-sl">0</span>
     </button>
@@ -2036,12 +2032,12 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
     <div class="today-date-txt" id="today-date-txt"></div>
   </div>
   <div class="today-stats">
-    <div class="today-stat" id="td-stat-calls" onclick="goTab('r');setFilter('uncalled')" title="未架電企業をフィルター表示">
+    <div class="today-stat" id="td-stat-calls" onclick="goTab('sl');setSalesStatusFilter('未架電')" title="未架電企業を営業リストで表示">
       <span class="today-stat-ico">📞</span>
       <span class="today-stat-num" id="td-calls">—</span>
       <span class="today-stat-lbl">架電対象</span>
     </div>
-    <div class="today-stat today-stat-recall" id="td-stat-recalls" onclick="setFilter('recall');goTab('r')" title="今日が再架電予定の企業">
+    <div class="today-stat today-stat-recall" id="td-stat-recalls" onclick="goTab('sl')" title="営業リストを表示">
       <span class="today-stat-ico">🔴</span>
       <span class="today-stat-num" id="td-recalls">—</span>
       <span class="today-stat-lbl">再架電</span>
@@ -2107,7 +2103,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 アポ改修版㉑</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 検索統合版㉒</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2323,7 +2319,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
   </div>
 
   <!-- RESULTS -->
-  <div id="pnl-r">
+  <div id="pnl-r" style="display:none">
     <div id="leads-container"></div>
   </div>
 
@@ -2333,9 +2329,10 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
           <h2 style="margin:0;font-size:1.05rem;color:var(--cyan)">📒 営業リスト</h2>
-          <p style="margin:4px 0 0;font-size:.74rem;color:var(--text-sub)">検索した企業がここに積み重なります。「今日」ボタンで架電日を記録し、メモを書けます。</p>
+          <p style="margin:4px 0 0;font-size:.74rem;color:var(--text-sub)">「企業を検索して追加」で企業を追加。各企業で「架電済み」「アポ取得」を記録できます。</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-cyan btn-sm" onclick="openSearchModal()">🔍 企業を検索して追加</button>
           <select id="sl-area" onchange="renderSalesList()" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.78rem"></select>
           <input id="sl-search" oninput="renderSalesList()" placeholder="🔍 企業名・住所で絞り込み" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.78rem;min-width:180px">
           <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border)" onclick="exportSalesCsv()">↓ CSV出力</button>
@@ -2534,10 +2531,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 <!-- MOBILE NAV -->
 <nav class="mobile-nav" id="mobile-nav">
   <div class="mobile-nav-inner">
-    <button class="mobile-nav-btn mnav-active" data-tab="r" onclick="goTab('r');mnavActivate(this)">
-      <span class="mobile-nav-icon">🔍</span>
-    </button>
-    <button class="mobile-nav-btn" data-tab="sl" onclick="goTab('sl');mnavActivate(this)">
+    <button class="mobile-nav-btn mnav-active" data-tab="sl" onclick="goTab('sl');mnavActivate(this)">
       <span class="mobile-nav-icon">📒</span>
     </button>
     <button class="mobile-nav-btn" data-tab="m" onclick="goTab('m');mnavActivate(this)">
@@ -5050,7 +5044,7 @@ function doSearch() {
       setTimeout(() => {
         document.getElementById('pgw').classList.remove('show');
         btn.disabled = false;
-        renderResults(); updateBadges(); goTab('r');
+        renderResults(); updateBadges(); goTab('sl');
         toast(`${results.length}件取得 → 除外${exclCount}件 → 重複${dupCount}件削除 → 最終${filtered.length}件追加`, 'ok');
       }, 400);
     })
@@ -5834,7 +5828,7 @@ async function startAreaSearch() {
       document.getElementById('pgw').classList.remove('show');
       btn.disabled = false;
       const _slAdded = addLeadsToSalesList(deduped);  /* 検索結果を営業リストに自動追加（重複除外） */
-      activeBatchId = null; curFilter = 'all'; renderResults(); renderSalesList(); renderCallList(); updateBadges(); updateKPIs(); goTab('r');  /* 検索後は最新リスト・全件表示で検索・リストに留まる */
+      activeBatchId = null; curFilter = 'all'; renderResults(); renderSalesList(); renderCallList(); updateBadges(); updateKPIs(); goTab('sl');  /* 検索後は営業リストに追加された最新を表示 */
 
       /* 詳細サマリー */
       const cityLines = cities.filter(c => cityResults[c] !== undefined)
@@ -7318,7 +7312,7 @@ async function fetchPlacesList() {
   const apiKey = localStorage.getItem('sanesu_gapi_key') || googleApiKey || '';
   if (!apiKey) {
     toast('Google APIキーが設定されていません。管理者にお問い合わせください', 'err');
-    goTab('r');
+    goTab('sl');
     setTimeout(() => {
       const notice = document.getElementById('api-key-notice');
       if (notice) { notice.style.display = 'block'; notice.scrollIntoView({ behavior:'smooth', block:'center' }); }
@@ -9439,6 +9433,7 @@ bootApp = function() {
   initTableReveal();
   const notice = document.getElementById('api-key-notice');
   if (notice) notice.style.display = googleApiKey ? 'none' : 'block';
+  try { goTab('sl'); } catch(e) {}
 };
 </script>
 </body>
