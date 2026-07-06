@@ -2103,7 +2103,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 検索統合版㉒</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 検索統合版㉓</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4501,7 +4501,7 @@ function updateKPIs() {
 /* ═══════════════════════════════════════ BADGE */
 function updateBadges() {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
-  document.getElementById('cnt-r').textContent = getAllLeads().length;
+  { const _cr = document.getElementById('cnt-r'); if (_cr) _cr.textContent = getAllLeads().length; }
   { const _cl = document.getElementById('cnt-l'); if (_cl) _cl.textContent = callList.filter(c => !c.hidden).length; }
   document.getElementById('cnt-m').textContent = getTodaySentCount();
   document.getElementById('cnt-p').textContent = pipeline.filter(p => p.stage !== 'contract').length;
