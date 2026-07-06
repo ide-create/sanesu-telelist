@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉝</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉞</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -9504,7 +9504,7 @@ function isAdminUser(){ return !!(window.FB && window.FB.user && window.FB.user.
 function _normArea(a){ return (['愛知','三重','岐阜','静岡'].indexOf(a)!==-1)?a:'愛知'; }
 function fbMigrateMine(){
   if(!isAdminUser()||!window._db){ toast('管理者のみ実行できます','err'); return; }
-  if(!confirm('あなたの過去データをクラウド（データ分析）に反映します。\n※以前に反映した分は自動で置き換えるので、何度押しても二重になりません。実行しますか？')) return;
+  if(!confirm('あなたのクラウド記録を、今の実績（架電・アポ・商談・契約の総数）に合わせてリセットします。\n※あなたの記録を入れ直し、余分な重複やテスト分は消えます。実行しますか？')) return;
   var u=window.FB.user, d0='2020-01-01';
   function buildDocs(){
     var docs=[];
@@ -9532,8 +9532,8 @@ function fbMigrateMine(){
     })();
   }
   toast('以前の反映分を整理中...','def');
-  window._db.collection('activity').where('migrated','==',true).get().then(function(snap){
-    var refs=[]; snap.forEach(function(d){ if(d.data().uid===u.uid) refs.push(d.ref); });
+  window._db.collection('activity').where('uid','==',u.uid).get().then(function(snap){
+    var refs=[]; snap.forEach(function(d){ refs.push(d.ref); });
     var di=0;
     (function delNext(){
       if(di>=refs.length){ writeAll(buildDocs()); return; }
