@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計修正版㉛</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉝</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4448,7 +4448,7 @@ function setKpi(id, val) {
 function updateKPIs() {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
   /* 総架電数 = 架電記録タブ + 営業リストの「今日 架電」の合計件数 */
-  const totalCalls = BASE_CALLS
+  const totalCalls = (isAdminUser() ? BASE_CALLS : 0)
                    + callList.reduce((sum, c) => sum + (c.callHistory ? c.callHistory.length : 0), 0)
                    + areaFilter(salesList).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0)
                    + areaFilter(salesCallArchive).reduce((sum, s) => sum + (s.calls ? s.calls.length : 0), 0);
@@ -4758,7 +4758,7 @@ function confirmSalesAppt() {
   if (p) p.meetingDate = meeting;
   save();
   renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges(); renderPipeline(); renderSchedule();
-  try{ if(window.fbLog) fbLog('appt',{area:companyArea(s), company:s.name}); }catch(e){}
+  try{ if(window.fbLog){ fbLog('call',{area:companyArea(s), company:s.name}); fbLog('appt',{area:companyArea(s), company:s.name}); } }catch(e){}
   closeModal('ov-sales-appt');
 }
 /* 削除する企業の架電記録をアーカイブへ退避（削除しても架電数を減らさない） */
@@ -9428,7 +9428,7 @@ var AGG_AREAS = ['\u611b\u77e5','\u4e09\u91cd','\u5c90\u961c','\u9759\u5ca1'];
 function _aggMetrics(evs){
   var m={call:0,appt:0,nego:0,contract:0};
   evs.forEach(function(e){ if(m[e.type]!=null) m[e.type]++; });
-  m.calls = m.call + m.appt;                                  /* \u67b6\u96fb\u6570=\u67b6\u96fb\u6e08+\u30a2\u30dd\u53d6\u5f97 */
+  m.calls = m.call;                                  /* \u67b6\u96fb\u6570=\u67b6\u96fb\u6e08+\u30a2\u30dd\u53d6\u5f97 */
   m.apptRate = m.calls ? Math.round(m.appt/m.calls*100) : 0;
   m.winRate  = m.appt  ? Math.round(m.contract/m.appt*100) : 0;
   return m;
@@ -9473,7 +9473,7 @@ function buildAdminAggHtml(events){
   Object.keys(MEMBER_NAMES).forEach(function(em){
     var evs=events.filter(function(e){ return e.email===em; });
     var m=_aggMetrics(evs);
-    mrows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+MEMBER_NAMES[em]+'</td>'+_aggRowCells(m)+'</tr>';
+    mrows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+MEMBER_NAMES[em]+'</td>'+_aggRowCells(m)+'<td style="text-align:center"><button onclick="fbDeleteMemberActivity(\''+em+'\')" title="このメンバーの記録を全削除" style="background:none;border:none;color:#c66;cursor:pointer;font-size:.85rem">🗑</button></td></tr>';
   });
   var memberTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:8px;font-size:.9rem">\ud83d\udc65 \u30e1\u30f3\u30d0\u30fc\u5225</div>'+_aggTable('\u30e1\u30f3\u30d0\u30fc',mrows)+'</div>';
   /* area table */
@@ -9497,9 +9497,71 @@ function buildAdminAggHtml(events){
   if(!crows) crows='<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-size:.78rem">まだ新規契約の記録はありません</td></tr>';
   var conTbl='<div class="glass" style="padding:16px"><div style="font-weight:700;color:#f0d98c;margin-bottom:8px;font-size:.9rem">\ud83c\udfc6 \u65b0\u898f\u5951\u7d04 \u4f01\u696d\u4e00\u89a7</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr style="border-bottom:1px solid rgba(120,160,220,.2)"><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u5951\u7d04\u65e5</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u4f01\u696d\u540d</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u62c5\u5f53</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u30a8\u30ea\u30a2</th></tr>'+crows+'</table></div>';
-  var head='<div class="glass" style="padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0;font-size:1.1rem;color:#8fc0f0">\ud83d\udcca \u5168\u54e1\u96c6\u8a08</h2><div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">\u30af\u30e9\u30a6\u30c9\u8a18\u9332\u306e\u5168\u30e1\u30f3\u30d0\u30fc\u5408\u8a08</div></div><button class="btn btn-sm" onclick="renderAdminAgg()" style="border:1px solid rgba(120,160,220,.4);color:#8fc0f0;font-size:.7rem;padding:6px 14px">\u21bb \u66f4\u65b0</button></div>';
+  var head='<div class="glass" style="padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0;font-size:1.1rem;color:#8fc0f0">\ud83d\udcca \u5168\u54e1\u96c6\u8a08</h2><div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">\u30af\u30e9\u30a6\u30c9\u8a18\u9332\u306e\u5168\u30e1\u30f3\u30d0\u30fc\u5408\u8a08</div></div><button class="btn btn-sm" onclick="fbMigrateMine()" style="border:1px solid rgba(212,175,55,.5);color:#f0d98c;font-size:.7rem;padding:6px 12px;margin-right:6px">⬆ 過去データを反映</button><button class="btn btn-sm" onclick="renderAdminAgg()" style="border:1px solid rgba(120,160,220,.4);color:#8fc0f0;font-size:.7rem;padding:6px 14px">\u21bb \u66f4\u65b0</button></div>';
   return head+cards+memberTbl+areaTbl+conTbl;
 }
+function isAdminUser(){ return !!(window.FB && window.FB.user && window.FB.user.email===window.ADMIN_EMAIL); }
+function _normArea(a){ return (['愛知','三重','岐阜','静岡'].indexOf(a)!==-1)?a:'愛知'; }
+function fbMigrateMine(){
+  if(!isAdminUser()||!window._db){ toast('管理者のみ実行できます','err'); return; }
+  if(!confirm('あなたの過去データをクラウド（データ分析）に反映します。\n※以前に反映した分は自動で置き換えるので、何度押しても二重になりません。実行しますか？')) return;
+  var u=window.FB.user, d0='2020-01-01';
+  function buildDocs(){
+    var docs=[];
+    for(var i=0;i<BASE_CALLS;i++) docs.push({type:'call',area:'愛知',day:d0,company:'(導入前)'});
+    (callList||[]).forEach(function(c){ var ar=companyArea(c); (c.callHistory||[]).forEach(function(h){ docs.push({type:'call',area:ar,day:((h.date||d0)+'').slice(0,10),company:c.company||''}); }); });
+    (salesList||[]).forEach(function(s){ var ar=companyArea(s); (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:s.name||''}); }); });
+    (salesCallArchive||[]).forEach(function(s){ var ar=_normArea(s.area||''); (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:''}); }); });
+    (pipeline||[]).forEach(function(p){ var ar=companyArea(p);
+      docs.push({type:'appt',area:ar,day:((p.contractDate||p.meetingDate||d0)+'').slice(0,10),company:p.company||''});
+      if(p.stage==='talking'||p.stage==='contract') docs.push({type:'nego',area:ar,day:d0,company:p.company||''});
+      if(p.stage==='contract') docs.push({type:'contract',area:ar,day:((p.contractDate||d0)+'').slice(0,10),company:p.company||'',amount:(p.unitPrice?parseFloat(p.unitPrice):null)});
+    });
+    return docs.map(function(o){ o.uid=u.uid; o.email=u.email||''; o.migrated=true; o.ts=firebase.firestore.FieldValue.serverTimestamp(); return o; });
+  }
+  function writeAll(full){
+    if(!full.length){ toast('反映する記録がありません','def'); return; }
+    toast(full.length+'件をクラウドへ反映中...','def');
+    var idx=0;
+    (function writeChunk(){
+      if(idx>=full.length){ toast('過去データを反映しました（'+full.length+'件）','ok'); renderAdminAgg(); return; }
+      var batch=window._db.batch(), end=Math.min(idx+400,full.length);
+      for(var k=idx;k<end;k++){ batch.set(window._db.collection('activity').doc(), full[k]); }
+      idx=end;
+      batch.commit().then(writeChunk).catch(function(e){ console.error(e); toast('反映エラー: '+(e.message||e),'err'); });
+    })();
+  }
+  toast('以前の反映分を整理中...','def');
+  window._db.collection('activity').where('migrated','==',true).get().then(function(snap){
+    var refs=[]; snap.forEach(function(d){ if(d.data().uid===u.uid) refs.push(d.ref); });
+    var di=0;
+    (function delNext(){
+      if(di>=refs.length){ writeAll(buildDocs()); return; }
+      var batch=window._db.batch(), end=Math.min(di+400,refs.length);
+      for(var k=di;k<end;k++) batch.delete(refs[k]);
+      di=end;
+      batch.commit().then(delNext).catch(function(e){ console.error(e); toast('整理エラー: '+(e.message||e),'err'); });
+    })();
+  }).catch(function(e){ console.error(e); toast('整理エラー: '+(e.message||e),'err'); });
+}
+function fbDeleteMemberActivity(email){
+  if(!isAdminUser()||!window._db){ toast('管理者のみ実行できます','err'); return; }
+  var nm=(MEMBER_NAMES[email]||email);
+  if(!confirm(nm+' の記録をすべて削除します。\n元に戻せません。よろしいですか？')) return;
+  window._db.collection('activity').where('email','==',email).get().then(function(snap){
+    if(snap.empty){ toast('記録がありません','def'); return; }
+    var refs=[]; snap.forEach(function(d){ refs.push(d.ref); });
+    var idx=0;
+    (function delChunk(){
+      if(idx>=refs.length){ toast(nm+' の記録を削除しました（'+refs.length+'件）','ok'); renderAdminAgg(); return; }
+      var batch=window._db.batch(), end=Math.min(idx+400,refs.length);
+      for(var k=idx;k<end;k++) batch.delete(refs[k]);
+      idx=end;
+      batch.commit().then(delChunk).catch(function(e){ console.error(e); toast('削除エラー: '+(e.message||e),'err'); });
+    })();
+  }).catch(function(e){ console.error(e); toast('削除エラー: '+(e.message||e),'err'); });
+}
+
 function renderAdminAgg(){
   var el=document.getElementById('admin-agg');
   if(!el) return;
