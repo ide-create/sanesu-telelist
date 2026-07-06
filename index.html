@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉞</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計一致版㉟</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -9509,10 +9509,10 @@ function fbMigrateMine(){
   function buildDocs(){
     var docs=[];
     for(var i=0;i<BASE_CALLS;i++) docs.push({type:'call',area:'愛知',day:d0,company:'(導入前)'});
-    (callList||[]).forEach(function(c){ var ar=companyArea(c); (c.callHistory||[]).forEach(function(h){ docs.push({type:'call',area:ar,day:((h.date||d0)+'').slice(0,10),company:c.company||''}); }); });
-    (salesList||[]).forEach(function(s){ var ar=companyArea(s); (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:s.name||''}); }); });
-    (salesCallArchive||[]).forEach(function(s){ var ar=_normArea(s.area||''); (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:''}); }); });
-    (pipeline||[]).forEach(function(p){ var ar=companyArea(p);
+    (callList||[]).forEach(function(c){ var ar='愛知'; (c.callHistory||[]).forEach(function(h){ docs.push({type:'call',area:ar,day:((h.date||d0)+'').slice(0,10),company:c.company||''}); }); });
+    (salesList||[]).forEach(function(s){ var ar='愛知'; (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:s.name||''}); }); });
+    (salesCallArchive||[]).forEach(function(s){ var ar='愛知'; (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:''}); }); });
+    (pipeline||[]).forEach(function(p){ var ar='愛知';
       docs.push({type:'appt',area:ar,day:((p.contractDate||p.meetingDate||d0)+'').slice(0,10),company:p.company||''});
       if(p.stage==='talking'||p.stage==='contract') docs.push({type:'nego',area:ar,day:d0,company:p.company||''});
       if(p.stage==='contract') docs.push({type:'contract',area:ar,day:((p.contractDate||d0)+'').slice(0,10),company:p.company||'',amount:(p.unitPrice?parseFloat(p.unitPrice):null)});
