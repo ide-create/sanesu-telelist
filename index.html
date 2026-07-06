@@ -1829,23 +1829,39 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
   }
 
   window.login = function() {
+    var em = document.getElementById('login-email');
     var inp = document.getElementById('pw');
     if (!inp) return;
-    if (inp.value === PW) {
-      sessionStorage.setItem(AUTH_KEY, '1');
-      hideLogin();
-      if (typeof bootApp === 'function') bootApp();
-    } else {
+    var email = ((em && em.value) || '').trim();
+    var pw = inp.value;
+    function fail(msg){
       var err = document.getElementById('err');
-      if (err) err.style.display = 'block';
-      inp.classList.remove('shake');
-      void inp.offsetWidth;
-      inp.classList.add('shake');
-      setTimeout(function() {
-        if (err) err.style.display = 'none';
-        inp.classList.remove('shake');
-      }, 3000);
+      if (err) { err.textContent = msg; err.style.display = 'block'; }
+      inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+      var b = document.getElementById('login-btn'); if (b) b.classList.remove('loading');
+      setTimeout(function(){ if (err) err.style.display = 'none'; inp.classList.remove('shake'); }, 3500);
     }
+    if (!email) { fail('メールアドレスを入力してください'); return; }
+    if (!pw) { fail('パスワードを入力してください'); return; }
+    if (!window._auth) { fail('接続エラー。少し待って再度お試しください'); return; }
+    var btn = document.getElementById('login-btn'); if (btn) btn.classList.add('loading');
+    window._auth.signInWithEmailAndPassword(email, pw)
+      .then(function(cred){
+        window.FB.user = cred.user;
+        sessionStorage.setItem(AUTH_KEY, '1');
+        sessionStorage.removeItem(GUEST_KEY);
+        hideLogin();
+        if (typeof bootApp === 'function') bootApp();
+      })
+      .catch(function(e){
+        var m = 'ログインに失敗しました';
+        if (e.code==='auth/invalid-email') m='メールアドレスの形式が正しくありません';
+        else if (e.code==='auth/user-not-found') m='アカウントが見つかりません';
+        else if (e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') m='メールまたはパスワードが違います';
+        else if (e.code==='auth/too-many-requests') m='試行回数が多すぎます。少し待ってください';
+        else if (e.code==='auth/network-request-failed') m='ネットワークエラー';
+        fail(m);
+      });
   };
 
   window.togglePw = function() {
@@ -1910,6 +1926,50 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 })();
 </script>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  var cfg = {
+    apiKey:"AIzaSyBEDpBuDvam1C3qa5DpciF4eJkfuOZCfzk",
+    authDomain:"sanesu-telelist.firebaseapp.com",
+    projectId:"sanesu-telelist",
+    storageBucket:"sanesu-telelist.firebasestorage.app",
+    messagingSenderId:"340764058095",
+    appId:"1:340764058095:web:f351422a3d9e8fd12c161a"
+  };
+  window.FB = { ready:false, user:null };
+  window.ADMIN_EMAIL = 'ide@sanesu-s.co.jp';
+  try {
+    if (window.firebase) {
+      firebase.initializeApp(cfg);
+      window._auth = firebase.auth();
+      window._db = firebase.firestore();
+      window.FB.ready = true;
+      window._auth.onAuthStateChanged(function(u){ window.FB.user = u || null; });
+    }
+  } catch(e){ console.error('Firebase init error', e); }
+  window.fbLog = function(type, extra){
+    try{
+      if (!window._db || !window.FB || !window.FB.user) return;
+      var area = (extra && extra.area) || '';
+      if (area === '港区') area = '愛知';
+      window._db.collection('activity').add({
+        uid: window.FB.user.uid,
+        email: window.FB.user.email || '',
+        type: type,
+        area: area,
+        company: (extra && extra.company) || '',
+        amount: (extra && extra.amount != null) ? extra.amount : null,
+        day: (typeof getTodayStr === 'function') ? getTodayStr() : '',
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }catch(e){ console.error('fbLog error', e); }
+  };
+})();
+</script>
 </head>
 <body>
 
@@ -1928,6 +1988,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
       </div>
     </div>
     <div class="login-form">
+      <input class="login-input" type="email" id="login-email" placeholder="EMAIL" autocomplete="username" style="margin-bottom:18px;letter-spacing:1px;text-transform:none" onkeydown="if(event.key==='Enter')login()">
       <div class="login-input-wrap">
         <input class="login-input" type="password" id="pw"
                placeholder="PASSWORD"
@@ -2114,7 +2175,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 検索演出版㉘</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 Firebase版㉙</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -4596,6 +4657,7 @@ function salesMarkCalled(id){
   if (!s.calls) s.calls = [];
   s.calls.push({ date: getTodayStr(), memo: '架電済み' });
   if (s.status !== '商談中') s.status = '架電済み';
+  try{ if(window.fbLog) fbLog('call',{area:companyArea(s)}); }catch(e){}
   save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
   toast('架電済みで記録しました（架電+1）', 'ok');
 }
@@ -4794,6 +4856,7 @@ function confirmSalesAppt() {
   if (p) p.meetingDate = meeting;
   save();
   renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges(); renderPipeline(); renderSchedule();
+  try{ if(window.fbLog) fbLog('appt',{area:companyArea(s), company:s.name}); }catch(e){}
   closeModal('ov-sales-appt');
 }
 /* 削除する企業の架電記録をアーカイブへ退避（削除しても架電数を減らさない） */
@@ -6808,6 +6871,7 @@ function saveResult() {
     c.dealHistory.push({ date:resDate.slice(0,10), time:resDate.slice(11,16)||'', type:'訪問',
       participants:resContact, content:memo, nextAction:'契約管理へ' });
     c.stage = 'contract';
+    try{ if(window.fbLog) fbLog('contract',{area:companyArea(c), company:c.company, amount:(tanka||0)}); }catch(e){}
     c.contractDate  = today;
     c.contractStart = startDate;
     c.unitPrice   = tanka ? String(tanka) : (c.unitPrice||'');
@@ -7835,6 +7899,7 @@ function handleStageMove(id, newStage) {
 
   /* その他（アポ取得↔商談中） */
   card.stage = newStage;
+  try{ if(newStage==='talking' && window.fbLog) fbLog('nego',{area:companyArea(card), company:card.company}); }catch(e){}
   save(); renderPipelineV2(); updateKPIs(); renderSchedule(); updateBadges();
   toast(card.company + ' を「' + (STAGE_LABELS[newStage] || newStage) + '」に移動しました', 'def');
 }
