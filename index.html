@@ -2103,7 +2103,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 検索統合版㉓</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 除外強化版㉔</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -5184,7 +5184,7 @@ function filterLeads(arr) {
   let dupCount   = 0;
   const exclHitWords = {}; // どの除外ワードで何件落ちたか（診断用）
 
-  const EXCL_AUTO_KW  = ['整備','ディーラー','販売店','修理','車検','板金','中古車','ガソリンスタンド','ENEOS','エネオス','出光','コスモ','レンタカー','カーリース','タイヤ専門','バッテリー専門','カーコーティング','カーオーディオ'];
+  const EXCL_AUTO_KW  = ['整備','ディーラー','販売店','修理','車検','板金','鈑金','中古車','自動車販売','ガソリンスタンド','ENEOS','エネオス','出光','コスモ','レンタカー','カーリース','タイヤ専門','バッテリー専門','カーコーティング','カーオーディオ','モータース','オートサービス','オートショップ','オートセンター','オートガレージ','カーサービス','カーショップ','カーコンビニ','コバック','ビッグモーター','ガリバー','カーセブン','アップル車検','車買取','買取専門'];
   const EXCL_FOOD_KW  = ['レストラン','食堂','カフェ','喫茶','居酒屋','焼肉','ラーメン','寿司','スナック','弁当','テイクアウト','ホテル','旅館','民宿'];
 
   const normalize = n => n.replace(/株式会社|有限会社|合同会社|合資会社|\s+/g,'').trim();
