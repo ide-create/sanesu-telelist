@@ -2107,7 +2107,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/25 ネイビー版⑳</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 アポ改修版㉑</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -3159,17 +3159,17 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 <div class="overlay" id="ov-sales-appt">
   <div class="modal" style="max-width:420px">
     <div class="m-head">
-      <h3>🤝 商談へ登録</h3>
+      <h3>🎯 アポ取得</h3>
       <button class="xbtn" onclick="closeModal('ov-sales-appt')">✕</button>
     </div>
     <div class="m-body">
       <div class="co-box"><strong id="sa-company">—</strong></div>
-      <div class="field"><label>[ 担当者名 ]</label><input type="text" id="sa-contact" placeholder="例：採用ご担当 山田様"></div>
+      <div class="field"><label>[ 人事担当者名 ]</label><input type="text" id="sa-contact" placeholder="例：採用ご担当 山田様"></div>
       <div class="field"><label>[ アポイント日 ]</label><input type="datetime-local" id="sa-meeting" style="color-scheme:dark"></div>
     </div>
     <div class="m-foot">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-sales-appt')">キャンセル</button>
-      <button class="btn btn-cyan btn-sm" onclick="confirmSalesAppt()">商談へ登録</button>
+      <button class="btn btn-cyan btn-sm" onclick="confirmSalesAppt()">アポ登録</button>
     </div>
   </div>
 </div>
@@ -4558,6 +4558,7 @@ const SALES_OUTCOMES = [
 ];
 function salesStatusColor(st){
   if (st === '商談中') return '#9f7aea';
+  if (st === '架電済み') return '#5aa0e0';
   const o = SALES_OUTCOMES.find(x => x.key === st);
   return o ? o.color : '#8a94a6';
 }
@@ -4574,6 +4575,17 @@ function setSalesOutcome(id, outcome){
   s.status = outcome;
   save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
   toast(outcome + ' で記録しました', 'ok');
+}
+
+/* 架電済みをワンタップ記録（＝架電1件） */
+function salesMarkCalled(id){
+  const s = salesList.find(x => x.id === id);
+  if (!s) return;
+  if (!s.calls) s.calls = [];
+  s.calls.push({ date: getTodayStr(), memo: '架電済み' });
+  if (s.status !== '商談中') s.status = '架電済み';
+  save(); renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges();
+  toast('架電済みで記録しました（架電+1）', 'ok');
 }
 
 function renderSalesList() {
@@ -4675,14 +4687,11 @@ function renderSalesList() {
       <td data-label="電話番号" style="vertical-align:top">${phoneHtml}</td>
       <td data-label="住所" style="vertical-align:top"><span style="font-size:.74rem">${esc(s.address)||'—'}</span></td>
       <td data-label="架電結果・メモ" style="vertical-align:top;min-width:260px">
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
-          ${SALES_OUTCOMES.map(o => {
-            const on = s.status === o.key;
-            return `<button onclick="setSalesOutcome('${s.id}','${o.key}')" title="${o.key}で記録（架電1件）" style="font-size:.62rem;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid ${o.color};background:${on?o.color:'transparent'};color:${on?'#fff':o.color};font-weight:${on?700:600}">${o.label}${on?' ✓':''}</button>`;
-          }).join('')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <button onclick="salesMarkCalled('${s.id}')" title="架電済みとして記録（架電1件）" style="font-size:.68rem;padding:5px 14px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid #5aa0e0;background:${s.status==='架電済み'?'#5aa0e0':'transparent'};color:${s.status==='架電済み'?'#fff':'#8fc0f0'};font-weight:700">📞 架電済み${s.status==='架電済み'?' ✓':''}</button>
           ${pipeline.some(p => p.company === s.name)
-            ? `<span style="font-size:.66rem;color:#c4a8ff;font-weight:700;align-self:center">🤝 商談中 ✓</span>`
-            : `<button onclick="salesToPipeline('${s.id}')" title="商談へ移す（架電1件）" style="font-size:.62rem;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid #9f7aea;background:transparent;color:#c4a8ff;font-weight:600">🤝 商談へ</button>`}
+            ? `<span style="font-size:.68rem;color:#7fe0b0;font-weight:700;align-self:center;padding:0 6px">🎯 アポ済み ✓</span>`
+            : `<button onclick="salesToPipeline('${s.id}')" title="アポ取得（アポ日・人事担当者名を入力／架電1件）" style="font-size:.68rem;padding:5px 14px;border-radius:12px;cursor:pointer;white-space:nowrap;border:1px solid #34be8c;background:transparent;color:#5fd6a8;font-weight:700">🎯 アポ取得</button>`}
         </div>
         ${callsHtml}
       </td>
@@ -4694,15 +4703,10 @@ function renderSalesList() {
   }).join('');
 
   const statusTabs = [
-    { key:'all',          label:'すべて' },
-    { key:'未架電',       label:'未架電' },
-    { key:'時間改めて',   label:'時間改めて' },
-    { key:'担当者名のみ', label:'担当者名のみ' },
-    { key:'タイミング',   label:'タイミング' },
-    { key:'電話に出ない', label:'電話に出ない' },
-    { key:'派遣NG',       label:'派遣NG' },
-    { key:'新規NG',       label:'新規NG' },
-    { key:'商談中',       label:'商談中' },
+    { key:'all',      label:'すべて' },
+    { key:'未架電',   label:'未架電' },
+    { key:'架電済み', label:'架電済み' },
+    { key:'商談中',   label:'商談中' },
   ];
   const tabBarHtml = statusTabs.map(t => {
     const n = statusCount(t.key);
