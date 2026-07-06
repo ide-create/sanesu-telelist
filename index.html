@@ -1847,6 +1847,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
     var btn = document.getElementById('login-btn'); if (btn) btn.classList.add('loading');
     window._auth.signInWithEmailAndPassword(email, pw)
       .then(function(cred){
+        window.__booted = true;
         window.FB.user = cred.user;
         sessionStorage.setItem(AUTH_KEY, '1');
         sessionStorage.removeItem(GUEST_KEY);
@@ -1910,15 +1911,32 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
   window.doLogout = function() {
     sessionStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem(GUEST_KEY);
-    location.reload();
+    window.__booted = false;
+    var done = function(){ location.reload(); };
+    try { if (window._auth) { window._auth.signOut().then(done).catch(done); return; } } catch(e){}
+    done();
   };
 
   window.doLogin    = window.login;
   window.doLoginAnim = window.login;
 
   window.addEventListener('load', function() {
-    if (sessionStorage.getItem(AUTH_KEY) === '1') {
-      if (sessionStorage.getItem(GUEST_KEY) === '1') window.applyGuestMode();
+    if (sessionStorage.getItem(GUEST_KEY) === '1') {
+      window.applyGuestMode(); hideLogin();
+      if (typeof bootApp === 'function') bootApp();
+      return;
+    }
+    if (window._auth) {
+      window._auth.onAuthStateChanged(function(u){
+        if (u && !window.__booted) {
+          window.__booted = true;
+          window.FB.user = u;
+          sessionStorage.setItem(AUTH_KEY, '1');
+          hideLogin();
+          if (typeof bootApp === 'function') bootApp();
+        }
+      });
+    } else if (sessionStorage.getItem(AUTH_KEY) === '1') {
       hideLogin();
       if (typeof bootApp === 'function') bootApp();
     }
@@ -1988,7 +2006,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
       </div>
     </div>
     <div class="login-form">
-      <input class="login-input" type="email" id="login-email" placeholder="EMAIL" autocomplete="username" style="margin-bottom:18px;letter-spacing:1px;text-transform:none" onkeydown="if(event.key==='Enter')login()">
+      <input class="login-input" type="email" id="login-email" placeholder="EMAIL" autocomplete="username" style="margin-bottom:18px;letter-spacing:1px;text-transform:none;opacity:0;animation:lRiseIn .6s 3.2s ease forwards" onkeydown="if(event.key==='Enter')login()">
       <div class="login-input-wrap">
         <input class="login-input" type="password" id="pw"
                placeholder="PASSWORD"
@@ -2175,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 全員集計版㉚</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 集計修正版㉛</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -9041,7 +9059,7 @@ function exportReportCSV() {
   }
 
   /* ── Chart 1: 月別推移（折れ線グラフ） ── */
-  new Chart(document.getElementById('chart-trend'), {
+  new Chart((document.getElementById('chart-trend')||document.createElement('canvas')), {
     type: 'line',
     data: {
       labels: last6Months(),
@@ -9124,7 +9142,7 @@ function exportReportCSV() {
   const fMax     = fRaw[0];
   const fSpacers = fRaw.map(v => (fMax - v) / 2);
 
-  new Chart(document.getElementById('chart-funnel'), {
+  new Chart((document.getElementById('chart-funnel')||document.createElement('canvas')), {
     type: 'bar',
     data: {
       labels: fLabels.map((l, i) => {
@@ -9184,7 +9202,7 @@ function exportReportCSV() {
   });
 
   /* ── Chart 3: エリア別成約率（縦棒グラフ） ── */
-  new Chart(document.getElementById('chart-area'), {
+  new Chart((document.getElementById('chart-area')||document.createElement('canvas')), {
     type: 'bar',
     data: {
       labels: ['西三河', '東三河', '三重', '静岡'],
@@ -9433,6 +9451,8 @@ function _aggTable(title, rows){
   return '<table style="width:100%;border-collapse:collapse;font-size:.8rem">'+head+rows+'</table>';
 }
 function buildAdminAggHtml(events){
+  var MEMBER_NAMES = {'ide@sanesu-s.co.jp':'井手','yoshiyama@sanesu-s.co.jp':'芳山','kodama@sanesu-s.co.jp':'児玉','yamamura@sanesu-s.co.jp':'山村'};
+  var AGG_AREAS = ['愛知','三重','岐阜','静岡'];
   var all=_aggMetrics(events);
   /* cards */
   function card(lbl,val,color,sub){
