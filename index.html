@@ -2175,7 +2175,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 Firebase版㉙</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 全員集計版㉚</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2243,115 +2243,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══════════════════════════════════════ データ分析 PAGE -->
 <div id="pnl-bi" style="display:none">
-<div class="analytics-wrap" id="analytics-section">
-  <div class="analytics-hd">
-    <span style="font-size:1.2rem">📊</span>
-    <h2>データ分析</h2>
-    <span class="anl-period">過去6ヶ月データ</span>
-  </div>
-
-  <!-- 上段：月別推移（全幅） -->
-  <div class="analytics-grid-bottom" style="margin-bottom:16px">
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">📊 月別架電・アポ・成約数の推移</div>
-        <div class="chart-card-sub">過去6ヶ月の月次パフォーマンス推移（架電数 / アポ数 / 成約数）</div>
-      </div>
-      <div class="chart-wrap" style="position:relative;height:300px"><canvas id="chart-trend"></canvas></div>
-    </div>
-  </div>
-
-  <!-- 中段：商談ファネル（全幅） -->
-  <div class="analytics-grid-bottom" style="margin-bottom:16px">
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🔻 商談ファネル</div>
-        <div class="chart-card-sub">架電 → アポ → 商談 → 新規契約の転換フロー</div>
-      </div>
-      <div class="chart-wrap" style="position:relative;height:280px"><canvas id="chart-funnel"></canvas></div>
-    </div>
-  </div>
-
-  <!-- 下段：3列グラフ -->
-  <div class="bi-merged-bottom">
-    <!-- ドーナツ -->
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🍩 架電ステータス別割合</div>
-        <div class="chart-card-sub">全架電リストのステータス分布</div>
-      </div>
-      <div class="chart-wrap" style="position:relative;height:260px"><canvas id="bi-chart-status"></canvas></div>
-    </div>
-    <!-- 目標達成率 -->
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🎯 目標達成率</div>
-        <div class="chart-card-sub">今週・今月の架電/アポ/契約目標に対する進捗</div>
-      </div>
-      <div id="bi-goals"></div>
-    </div>
-    <!-- ヒートマップ -->
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🗓 アクションヒートマップ</div>
-        <div class="chart-card-sub">過去4週間の日別架電アクション数</div>
-      </div>
-      <div id="bi-heatmap"></div>
-    </div>
-  </div>
-
-  <!-- エリア別成約率（静的） -->
-  <div class="analytics-grid-bottom">
-    <div class="chart-card">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🗾 月次エリア別成約率（過去6ヶ月）</div>
-        <div class="chart-card-sub">西三河・東三河・三重・静岡の地域別成約率比較</div>
-      </div>
-      <div class="chart-wrap"><canvas id="chart-area" height="200"></canvas></div>
-    </div>
-  </div>
-
-  <!-- エリア別・業種別（実データ） -->
-  <div class="analytics-grid-2" id="area-ind-charts">
-    <div class="chart-card" id="card-area-live">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">📍 エリア別 架電実績</div>
-        <div class="chart-card-sub" id="best-area-tag"></div>
-      </div>
-      <div id="area-live-body"><div style="color:var(--text-muted);font-size:.78rem;padding:20px 0;text-align:center">データを読み込み中...</div></div>
-    </div>
-    <div class="chart-card" id="card-ind-live">
-      <div class="chart-card-hd">
-        <div class="chart-card-title">🏭 業種別 架電実績</div>
-        <div class="chart-card-sub" id="best-ind-tag"></div>
-      </div>
-      <div id="ind-live-body"><div style="color:var(--text-muted);font-size:.78rem;padding:20px 0;text-align:center">データを読み込み中...</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- 週次営業レポート -->
-<div class="report-wrap" id="report-section">
-  <div class="report-hd">
-    <span style="font-size:1.2rem">📋</span>
-    <h2>週次営業レポート</h2>
-    <span class="rpt-week-badge" id="rpt-week-label">期間未設定</span>
-    <div class="rpt-actions">
-      <span class="rpt-gen-time" id="rpt-gen-time"></span>
-      <button class="btn btn-ghost btn-sm" onclick="generateWeeklyReport('last')">先週を表示</button>
-      <button class="btn btn-ghost btn-sm" onclick="generateWeeklyReport('this')">今週を表示</button>
-      <button class="btn btn-green btn-sm" onclick="exportReportPDF()">📄 PDF出力</button>
-      <button class="btn btn-ghost btn-sm" onclick="copyReportToClipboard()">📧 メール送信</button>
-      <button class="btn btn-ghost btn-sm" onclick="exportReportCSV()">📊 CSV出力</button>
-    </div>
-  </div>
-  <div class="rpt-body" id="rpt-body">
-    <div class="rpt-empty-state">
-      <div class="rpt-empty-ico">📋</div>
-      <div class="rpt-empty-msg">「今週を表示」または「先週を表示」をクリックしてレポートを生成してください<br>毎週月曜日に先週分のレポートが自動生成されます</div>
-    </div>
-  </div>
-</div>
+  <div id="admin-agg"></div>
 </div><!-- /pnl-bi -->
 
 <div class="container">
@@ -3377,7 +3269,7 @@ function setAreaFilter(a){
   try {
     if (id === 'p') renderPipelineV2();
     else if (id === 'm') renderMailCompanyList();
-    else if (id === 'bi') { renderAreaCharts(); renderBiCharts(); }
+    else if (id === 'bi') { try{ renderAdminAgg(); }catch(e){ console.error(e); } }
   } catch(e){ console.error(e); }
 }
 
@@ -4168,15 +4060,7 @@ function goTab(id) {
   if (id === 'c') renderContractList();
   if (id === 'm') initMailTab();
   if (id === 'bi') {
-    setTimeout(() => {
-      try {
-        if (window.Chart && Chart.instances) {
-          Object.values(Chart.instances).forEach(c => { try { c.resize(); } catch(e){} });
-        }
-        renderAreaCharts();
-        renderBiCharts();
-      } catch(e) { console.error('BI charts render error:', e); }
-    }, 80);
+    setTimeout(function(){ try{ renderAdminAgg(); }catch(e){ console.error(e); } }, 60);
   }
 }
 function mnavActivate(btn) {
@@ -9513,6 +9397,101 @@ initTableReveal = function() {
     });
   }).observe(lc, { childList: true, subtree: true });
 };
+
+
+/* ═══════ 全員集計（管理者のみ・Firestore）═══════ */
+var MEMBER_NAMES = {
+  'ide@sanesu-s.co.jp':'\u4e95\u624b',
+  'yoshiyama@sanesu-s.co.jp':'\u82b3\u5c71',
+  'kodama@sanesu-s.co.jp':'\u5150\u7389',
+  'yamamura@sanesu-s.co.jp':'\u5c71\u6751'
+};
+var AGG_AREAS = ['\u611b\u77e5','\u4e09\u91cd','\u5c90\u961c','\u9759\u5ca1'];
+function _aggMetrics(evs){
+  var m={call:0,appt:0,nego:0,contract:0};
+  evs.forEach(function(e){ if(m[e.type]!=null) m[e.type]++; });
+  m.calls = m.call + m.appt;                                  /* \u67b6\u96fb\u6570=\u67b6\u96fb\u6e08+\u30a2\u30dd\u53d6\u5f97 */
+  m.apptRate = m.calls ? Math.round(m.appt/m.calls*100) : 0;
+  m.winRate  = m.appt  ? Math.round(m.contract/m.appt*100) : 0;
+  return m;
+}
+function _num(n,color){ return '<td style="text-align:center;font-family:var(--mono);font-weight:700;color:'+(color||'#dce9fa')+'">'+n+'</td>'; }
+function _aggRowCells(m){
+  return _num(m.calls,'#7db8e8')+_num(m.appt,'#5fd6a8')+_num(m.nego,'#c4a8ff')+_num(m.contract,'#f0d98c')
+       + '<td style="text-align:center;font-family:var(--mono);color:var(--text-muted)">'+m.apptRate+'%</td>'
+       + '<td style="text-align:center;font-family:var(--mono);color:var(--text-muted)">'+m.winRate+'%</td>';
+}
+function _aggTable(title, rows){
+  var head='<tr style="border-bottom:1px solid rgba(120,160,220,.2)">'
+    +'<th style="text-align:left;padding:6px 8px;font-size:.68rem;color:var(--text-muted);font-weight:600">'+title+'</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#7db8e8">\u67b6\u96fb</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#5fd6a8">\u30a2\u30dd</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#c4a8ff">\u5546\u8ac7</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#f0d98c">\u5951\u7d04</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:var(--text-muted)">\u30a2\u30dd\u7387</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:var(--text-muted)">\u6210\u7d04\u7387</th></tr>';
+  return '<table style="width:100%;border-collapse:collapse;font-size:.8rem">'+head+rows+'</table>';
+}
+function buildAdminAggHtml(events){
+  var all=_aggMetrics(events);
+  /* cards */
+  function card(lbl,val,color,sub){
+    return '<div class="glass" style="padding:14px 16px;text-align:center"><div style="font-size:.6rem;letter-spacing:1px;color:var(--text-muted)">'+lbl+'</div>'
+      +'<div style="font-size:2rem;font-weight:800;color:'+color+';line-height:1.1;margin-top:2px">'+val+'</div>'
+      +'<div style="font-size:.58rem;color:var(--text-muted);margin-top:2px">'+(sub||'')+'</div></div>';
+  }
+  var cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px">'
+    +card('\u7dcf\u67b6\u96fb\u6570',all.calls,'#7db8e8','\u67b6\u96fb\u6e08+\u30a2\u30dd')
+    +card('\u30a2\u30dd\u53d6\u5f97\u6570',all.appt,'#5fd6a8','')
+    +card('\u5546\u8ac7\u6570',all.nego,'#c4a8ff','')
+    +card('\u65b0\u898f\u5951\u7d04\u6570',all.contract,'#f0d98c','')
+    +card('\u30a2\u30dd\u7387',all.apptRate+'%','#dce9fa','\u30a2\u30dd\u00f7\u67b6\u96fb')
+    +card('\u6210\u7d04\u7387',all.winRate+'%','#dce9fa','\u5951\u7d04\u00f7\u30a2\u30dd')
+    +'</div>';
+  /* member table */
+  var mrows='';
+  Object.keys(MEMBER_NAMES).forEach(function(em){
+    var evs=events.filter(function(e){ return e.email===em; });
+    var m=_aggMetrics(evs);
+    mrows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+MEMBER_NAMES[em]+'</td>'+_aggRowCells(m)+'</tr>';
+  });
+  var memberTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:8px;font-size:.9rem">\ud83d\udc65 \u30e1\u30f3\u30d0\u30fc\u5225</div>'+_aggTable('\u30e1\u30f3\u30d0\u30fc',mrows)+'</div>';
+  /* area table */
+  var arows='';
+  AGG_AREAS.forEach(function(ar){
+    var evs=events.filter(function(e){ return (e.area||'')===ar; });
+    var m=_aggMetrics(evs);
+    arows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+ar+'</td>'+_aggRowCells(m)+'</tr>';
+  });
+  var areaTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:8px;font-size:.9rem">\ud83d\uddfe \u30a8\u30ea\u30a2\u5225</div>'+_aggTable('\u30a8\u30ea\u30a2',arows)+'</div>';
+  /* contract list */
+  var cons=events.filter(function(e){ return e.type==='contract'; }).sort(function(a,b){ return (b.day||'').localeCompare(a.day||''); });
+  var crows='';
+  cons.forEach(function(e){
+    var who=MEMBER_NAMES[e.email]||e.email||'';
+    crows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:var(--text-muted);font-family:var(--mono);font-size:.72rem">'+(e.day||'')+'</td>'
+      +'<td style="padding:7px 8px;color:#fff">'+(e.company||'\uff08\u4f01\u696d\u540d\u306a\u3057\uff09')+'</td>'
+      +'<td style="padding:7px 8px;color:#8fc0f0">'+who+'</td>'
+      +'<td style="padding:7px 8px;color:#f0d98c">'+(e.area||'')+'</td></tr>';
+  });
+  if(!crows) crows='<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-size:.78rem">まだ新規契約の記録はありません</td></tr>';
+  var conTbl='<div class="glass" style="padding:16px"><div style="font-weight:700;color:#f0d98c;margin-bottom:8px;font-size:.9rem">\ud83c\udfc6 \u65b0\u898f\u5951\u7d04 \u4f01\u696d\u4e00\u89a7</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr style="border-bottom:1px solid rgba(120,160,220,.2)"><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u5951\u7d04\u65e5</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u4f01\u696d\u540d</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u62c5\u5f53</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u30a8\u30ea\u30a2</th></tr>'+crows+'</table></div>';
+  var head='<div class="glass" style="padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0;font-size:1.1rem;color:#8fc0f0">\ud83d\udcca \u5168\u54e1\u96c6\u8a08</h2><div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">\u30af\u30e9\u30a6\u30c9\u8a18\u9332\u306e\u5168\u30e1\u30f3\u30d0\u30fc\u5408\u8a08</div></div><button class="btn btn-sm" onclick="renderAdminAgg()" style="border:1px solid rgba(120,160,220,.4);color:#8fc0f0;font-size:.7rem;padding:6px 14px">\u21bb \u66f4\u65b0</button></div>';
+  return head+cards+memberTbl+areaTbl+conTbl;
+}
+function renderAdminAgg(){
+  var el=document.getElementById('admin-agg');
+  if(!el) return;
+  var isAdmin = window.FB && window.FB.user && window.FB.user.email===window.ADMIN_EMAIL;
+  if(!isAdmin){ el.innerHTML='<div class="glass" style="padding:44px;text-align:center;color:var(--text-muted)">\u3053\u306e\u753b\u9762\u306f\u7ba1\u7406\u8005\u306e\u307f\u8868\u793a\u3067\u304d\u307e\u3059\u3002</div>'; return; }
+  if(!window._db){ el.innerHTML='<div class="glass" style="padding:44px;text-align:center">\u63a5\u7d9a\u3067\u304d\u307e\u305b\u3093\u3002</div>'; return; }
+  el.innerHTML='<div class="glass" style="padding:44px;text-align:center;color:var(--text-muted)">\u96c6\u8a08\u3092\u8aad\u307f\u8fbc\u307f\u4e2d...</div>';
+  window._db.collection('activity').get().then(function(snap){
+    var events=[]; snap.forEach(function(d){ events.push(d.data()); });
+    el.innerHTML=buildAdminAggHtml(events);
+  }).catch(function(e){ console.error(e); el.innerHTML='<div class="glass" style="padding:44px;text-align:center;color:var(--red)">\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc: '+(e.message||e)+'</div>'; });
+}
 
 // bootApp にパッチ → ログイン後に全アニメ起動 + 再架電チェック + 今日タスク
 const _baA = bootApp;
