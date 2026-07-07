@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 KPI合算版㊱</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 いなべ追加版㊲</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -3249,7 +3249,7 @@ const TERRITORIES = {
   '港区': ['名古屋市港区'],
   '愛知': ['豊田市','知立市','安城市','刈谷市','岡崎市','みよし市','名古屋市','一宮市','春日井市'],
   '静岡': ['蒲郡市','豊川市','豊橋市','田原市','新城市','浜松市','湖西市'],
-  '三重': ['四日市市','鈴鹿市','津市','桑名市','亀山市','伊勢市','松阪市'],
+  '三重': ['四日市市','鈴鹿市','津市','桑名市','亀山市','伊勢市','松阪市','いなべ市'],
   '岐阜': ['可児市','御嵩町'],
 };
 const TERRITORY_KEYS = Object.keys(TERRITORIES);
@@ -4860,7 +4860,7 @@ const AREA_COORDS = {
 const PREF_CITIES = {
   '愛知県':  ['豊田市','岡崎市','安城市','刈谷市','知立市','豊橋市','豊川市','蒲郡市','碧南市','西尾市','名古屋市','一宮市','春日井市'],
   '静岡県':  ['浜松市','磐田市','静岡市','富士市','沼津市','焼津市','藤枝市','袋井市'],
-  '三重県':  ['四日市市','鈴鹿市','津市','桑名市','伊勢市','松阪市'],
+  '三重県':  ['四日市市','鈴鹿市','津市','桑名市','伊勢市','松阪市','いなべ市'],
   '神奈川県':['横浜市','川崎市','相模原市','厚木市','藤沢市','平塚市','小田原市'],
   '大阪府':  ['大阪市','東大阪市','堺市','吹田市','豊中市','枚方市','茨木市'],
   '兵庫県':  ['神戸市','姫路市','尼崎市','明石市','西宮市'],
@@ -4905,6 +4905,7 @@ const CITY_COORDS = {
   '鈴鹿市':    {lat:34.8829,lon:136.5842,city:'鈴鹿市'},
   '津市':      {lat:34.7302,lon:136.5082,city:'津市'},
   '桑名市':    {lat:35.0600,lon:136.6903,city:'桑名市'},
+  'いなべ市':  {lat:35.1183,lon:136.5636,city:'いなべ市'},
   '伊勢市':    {lat:34.4910,lon:136.7062,city:'伊勢市'},
   '松阪市':    {lat:34.5779,lon:136.5272,city:'松阪市'},
   '横浜市':    {lat:35.4478,lon:139.6425,city:'横浜市'},
@@ -5374,7 +5375,7 @@ const AREA_PRESETS = {
   mie: {
     id:'mie', icon:'⛩️', name:'三重エリア', pref:'三重県',
     catch:'ホンダ鈴鹿・石油化学コンビナート',
-    cities:['四日市市','鈴鹿市','津市','桑名市','亀山市','伊勢市','松阪市'],
+    cities:['いなべ市','四日市市','鈴鹿市','津市','桑名市','亀山市','伊勢市','松阪市'],
     keywords:['化学','自動車部品','製造業','石油化学','組立','工場'],
     defaultCategories:['auto','metal','elec'],
     grad:'linear-gradient(135deg,rgba(90,0,0,.55) 0%,rgba(200,40,40,.4) 100%)',
