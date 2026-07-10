@@ -2193,7 +2193,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 いなべ追加版㊲</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 次アクション版㊳</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2429,6 +2429,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
     <!-- KPIバー -->
     <div class="pipe2-kpi-row" id="pipe2-kpi-row"></div>
+    <div id="pipe2-action-bar" style="max-width:1440px;margin:0 auto 14px;padding:0 20px"></div>
 
     <!-- メインレイアウト（カンバン＋サイドパネル） -->
     <div class="pipe2-layout" id="pipe2-layout">
@@ -7640,6 +7641,7 @@ function renderPipelineV2() {
 function _renderPipelineV2Impl() {
   const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
   renderPipeKpi();
+  try { renderPipeActionBar(pipeline); } catch(e){ console.error(e); }
   const kb = document.getElementById('pipe2-kb');
   if (!kb) return;
 
@@ -7687,6 +7689,37 @@ function _renderPipelineV2Impl() {
   if (cntC) cntC.textContent = pipeline.filter(p => p && p.stage==='contract').length;
 }
 
+function buildNextActionHtml(c){
+  if(!c || !c.nextDate) return '';
+  var today = (typeof getTodayStr==='function') ? getTodayStr() : new Date().toISOString().slice(0,10);
+  var nd = (c.nextDate+'').slice(0,10);
+  var diff = Math.round((new Date(nd+'T00:00') - new Date(today+'T00:00'))/86400000);
+  var overdue = diff<0, isToday = diff===0, soon = diff>0 && diff<=3;
+  var col = (overdue||isToday) ? '#ff7676' : soon ? '#f0c860' : '#8fc0f0';
+  var bg  = (overdue||isToday) ? 'rgba(255,90,90,.10)' : soon ? 'rgba(240,200,90,.10)' : 'rgba(90,150,220,.08)';
+  var tag = overdue ? '\u26a0\ufe0f 期限切れ' : isToday ? '\ud83d\udd34 本日' : soon ? '\ud83d\udfe1 まもなく' : '\ud83d\udccc';
+  var act = c.nextAction ? esc(c.nextAction) : '次アクション';
+  var dstr = nd.slice(5).replace('-','/');
+  return '<div style="margin-top:5px;padding:4px 7px;border-radius:6px;background:'+bg+';font-size:.66rem;color:'+col+';font-weight:600;line-height:1.3">'+tag+' '+dstr+'　'+act+'</div>';
+}
+function renderPipeActionBar(pl){
+  var el = document.getElementById('pipe2-action-bar');
+  if(!el) return;
+  var today = (typeof getTodayStr==='function') ? getTodayStr() : new Date().toISOString().slice(0,10);
+  var due = (pl||[]).filter(function(p){ return p && p.stage!=='contract' && p.stage!=='lost' && p.nextDate && (p.nextDate+'').slice(0,10) <= today; });
+  due.sort(function(a,b){ return (a.nextDate+'').localeCompare(b.nextDate+''); });
+  if(!due.length){ el.innerHTML=''; return; }
+  var items = due.map(function(p){
+    var nd=(p.nextDate+'').slice(0,10); var overdue = nd < today;
+    var col = overdue ? '#ff7676' : '#ffd36b';
+    var tag = overdue ? '期限切れ' : '本日';
+    return '<div onclick="openPipeDetailV2(\''+p.id+'\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid '+(overdue?'rgba(255,110,110,.3)':'rgba(255,210,100,.3)')+'">'
+      +'<span style="font-size:.62rem;font-weight:700;color:'+col+';white-space:nowrap">'+tag+' '+nd.slice(5).replace('-','/')+'</span>'
+      +'<span style="font-size:.8rem;color:#fff;font-weight:600">'+esc(p.company||'')+'</span>'
+      +'<span style="font-size:.7rem;color:rgba(255,255,255,.6)">'+(p.nextAction?esc(p.nextAction):'')+'</span></div>';
+  }).join('');
+  el.innerHTML = '<div class="glass" style="padding:12px 16px"><div style="font-weight:700;color:#ffd36b;font-size:.85rem;margin-bottom:8px">\u23f0 要対応（'+due.length+'件）— 次アクションの予定日が来ています</div><div style="display:flex;flex-direction:column;gap:6px">'+items+'</div></div>';
+}
 function buildP2Card(c, stage) {
   if (!c) return '';
   const prob    = parseInt(c.probability) || 0;
@@ -7710,6 +7743,7 @@ function buildP2Card(c, stage) {
 
   const amtHtml = amtN ? `<div class="p2-card-amount">💰 ${fmtAmt(amtN)}円</div>` : '';
   const dtHtml  = c.meetingDate ? `<div class="p2-card-row">📅 ${fmtDt(c.meetingDate)}</div>` : '';
+  const nextHtml = buildNextActionHtml(c);
 
   /* 契約済は結果入力ボタン非表示 */
   const resultBtn = c.stage !== 'contract'
@@ -7722,7 +7756,7 @@ function buildP2Card(c, stage) {
       onclick="openPipeDetailV2('${c.id}')">
     <div class="p2-card-company">${esc(company)}</div>
     ${c.contact && c.contact !== 'undefined' ? `<div class="p2-card-contact">👤 ${esc(c.contact)}</div>` : ''}
-    ${amtHtml}${dtHtml}${dealInfo}
+    ${amtHtml}${dtHtml}${dealInfo}${nextHtml}
     <div class="p2-card-foot">
       ${probBadge(prob)}
       <span class="p2-card-date">${fmtDate(c.createdAt)}</span>
@@ -7940,6 +7974,14 @@ function buildPsTab1(c) {
       <label>📝 メモ</label>
       <textarea class="p2-inp p2-textarea" id="ps1-memo" placeholder="提案内容・条件など">${esc(c.memo||'')}</textarea>
     </div>
+    <div class="p2-field">
+      <label>⏰ 次回予定日</label>
+      <input class="p2-inp" type="date" id="ps1-nextdate" value="${(c.nextDate||'').slice(0,10)}" style="color-scheme:dark">
+    </div>
+    <div class="p2-field">
+      <label>✅ 次のアクション</label>
+      <input class="p2-inp" id="ps1-nextaction" value="${esc(c.nextAction||'')}" placeholder="例：8月に再アプローチ／見積提出">
+    </div>
     <div style="display:flex;gap:8px">
       <button class="cl-btn-save" style="flex:1" onclick="savePsTab1('${c.id}')">💾 保存</button>
       <button class="cl-btn-cancel" onclick="openPipeModal('${c.id}')">詳細編集</button>
@@ -7957,6 +7999,8 @@ function savePsTab1(id) {
   c.probability  = document.getElementById('ps1-prob')?.value || '50';
   c.expectedClose= document.getElementById('ps1-close')?.value.trim() || '';
   c.memo         = document.getElementById('ps1-memo')?.value.trim() || '';
+  c.nextDate     = document.getElementById('ps1-nextdate')?.value || '';
+  c.nextAction   = document.getElementById('ps1-nextaction')?.value.trim() || '';
   save(); renderPipelineV2(); renderSchedule(); updateKPIs();
   toast('保存しました ✓', 'ok');
   renderPipeSidePanel();
