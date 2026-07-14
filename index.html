@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 経路追加版㊸</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談共有版㊹</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2426,6 +2426,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
         </select>
       </div>
       <button class="pipe2-add-manual" onclick="openPipeModal(null)">＋ 手動で商談を追加（飛び込み・紹介・名刺等）</button>
+      <span id="pipe2-admin-tools"></span>
     </div>
 
     <!-- KPIバー -->
@@ -3318,6 +3319,7 @@ function save() {
   localStorage.setItem('tl_calls', JSON.stringify(callList));
   localStorage.setItem('tl_mail',  JSON.stringify(mailList));
   localStorage.setItem('tl_pipe',  JSON.stringify(pipeline));
+  try{ if(window.fbSyncDeals) fbSyncDeals(); }catch(e){}
   localStorage.setItem('tl_sales', JSON.stringify(salesList));
   localStorage.setItem('tl_sales_archive', JSON.stringify(salesCallArchive));
   localStorage.setItem('tl_comp',  JSON.stringify(competitorNotes));
@@ -7663,7 +7665,9 @@ function renderPipelineV2() {
   }
 }
 function _renderPipelineV2Impl() {
-  const callList = areaFilter(_calls()), pipeline = areaFilter(_pipe());
+  const callList = areaFilter(_calls());
+  const pipeline = areaFilter(pipeView());
+  try { renderDealToggle(); } catch(e){ console.error(e); }
   renderPipeKpi();
   try { renderPipeActionBar(pipeline); } catch(e){ console.error(e); }
   try { renderPipeFunnel(pipeline); } catch(e){ console.error(e); }
@@ -7828,6 +7832,7 @@ function buildP2Card(c, stage) {
   const dtHtml  = c.meetingDate ? `<div class="p2-card-row">📅 ${fmtDt(c.meetingDate)}</div>` : '';
   const nextHtml = buildNextActionHtml(c);
   const routeHtml = c.route ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;border:1px solid ${routeColor(c.route)}55;color:${routeColor(c.route)};margin-top:4px">${routeLabel(c.route)}</span>` : '';
+  const ownerHtml = (window._showAllDeals && c.email) ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;background:rgba(143,192,240,.14);color:#8fc0f0;margin-top:4px;margin-left:4px">\ud83d\udc64 ${(MEMBER_NAMES[c.email]||c.email)}</span>` : '';
 
   /* 契約済は結果入力ボタン非表示 */
   const resultBtn = c.stage !== 'contract'
@@ -7840,7 +7845,7 @@ function buildP2Card(c, stage) {
       onclick="openPipeDetailV2('${c.id}')">
     <div class="p2-card-company">${esc(company)}</div>
     ${c.contact && c.contact !== 'undefined' ? `<div class="p2-card-contact">👤 ${esc(c.contact)}</div>` : ''}
-    ${amtHtml}${dtHtml}${dealInfo}${routeHtml}${nextHtml}
+    ${amtHtml}${dtHtml}${dealInfo}${routeHtml}${ownerHtml}${nextHtml}
     <div class="p2-card-foot">
       ${probBadge(prob)}
       <span class="p2-card-date">${fmtDate(c.createdAt)}</span>
@@ -7976,7 +7981,7 @@ function switchPipeTab(n) {
 }
 
 function renderPipeSidePanel() {
-  const c = pipeline.find(p => p.id === p2OpenId);
+  const c = findDeal(p2OpenId);
   if (!c) return;
   const stage = PIPE_STAGES.find(s => s.id === c.stage) || {icon:'?',label:c.stage||'不明',color:'rgba(255,255,255,.3)'};
 
@@ -8073,7 +8078,9 @@ function buildPsTab1(c) {
 }
 
 function savePsTab1(id) {
-  const c = pipeline.find(p => p.id === id);
+  var c = (pipeline||[]).find(p => p.id === id);
+  var foreign = false;
+  if (!c && window._allDeals) { c = window._allDeals.find(p => p.id === id); foreign = !!c; }
   if (!c) return;
   c.company      = document.getElementById('ps1-company')?.value.trim() || c.company;
   c.contact      = document.getElementById('ps1-contact')?.value.trim() || '';
@@ -8085,6 +8092,7 @@ function savePsTab1(id) {
   c.memo         = document.getElementById('ps1-memo')?.value.trim() || '';
   c.nextDate     = document.getElementById('ps1-nextdate')?.value || '';
   c.nextAction   = document.getElementById('ps1-nextaction')?.value.trim() || '';
+  if (foreign) { saveForeignDeal(c); renderPipelineV2(); return; }
   save(); renderPipelineV2(); renderSchedule(); updateKPIs();
   toast('保存しました ✓', 'ok');
   renderPipeSidePanel();
@@ -9721,6 +9729,82 @@ function fbDeleteMemberActivity(email){
   }).catch(function(e){ console.error(e); toast('削除エラー: '+(e.message||e),'err'); });
 }
 
+/* ═══ 商談カードのクラウド共有 ═══ */
+window._allDeals = null;          /* 管理者：全員の商談（クラウド） */
+window._showAllDeals = false;     /* 全員表示トグル */
+var _dealSyncTimer = null;
+function fbSyncDeals(){
+  if(!window._db || !window.FB || !window.FB.user) return;
+  clearTimeout(_dealSyncTimer);
+  _dealSyncTimer = setTimeout(function(){
+    var u = window.FB.user;
+    try{
+      var batch = window._db.batch();
+      (pipeline||[]).forEach(function(p){
+        if(!p || !p.id) return;
+        var ref = window._db.collection('deals').doc(u.uid + '_' + p.id);
+        var d = JSON.parse(JSON.stringify(p));
+        d.uid = u.uid; d.email = u.email || ''; d.updatedAt = Date.now();
+        batch.set(ref, d);
+      });
+      batch.commit().catch(function(e){ console.error('deal sync', e); });
+    }catch(e){ console.error(e); }
+  }, 1200);
+}
+function fbUploadAllDeals(){
+  if(!window._db || !window.FB || !window.FB.user){ toast('接続できません','err'); return; }
+  if(!(pipeline||[]).length){ toast('商談カードがありません','def'); return; }
+  var u = window.FB.user, batch = window._db.batch();
+  pipeline.forEach(function(p){
+    var ref = window._db.collection('deals').doc(u.uid + '_' + p.id);
+    var d = JSON.parse(JSON.stringify(p));
+    d.uid = u.uid; d.email = u.email || ''; d.updatedAt = Date.now();
+    batch.set(ref, d);
+  });
+  batch.commit().then(function(){ toast('商談カード'+pipeline.length+'件をクラウドへ反映しました','ok'); if(window._showAllDeals) loadAllDeals(); })
+    .catch(function(e){ console.error(e); toast('反映エラー: '+(e.message||e),'err'); });
+}
+function loadAllDeals(cb){
+  if(!isAdminUser() || !window._db) { if(cb) cb(); return; }
+  window._db.collection('deals').get().then(function(snap){
+    var arr=[]; snap.forEach(function(d){ arr.push(d.data()); });
+    window._allDeals = arr;
+    if(cb) cb();
+    renderPipelineV2();
+  }).catch(function(e){ console.error(e); toast('読み込みエラー: '+(e.message||e),'err'); });
+}
+function toggleAllDeals(){
+  window._showAllDeals = !window._showAllDeals;
+  if(window._showAllDeals){ toast('全員の商談を読み込み中...','def'); loadAllDeals(); }
+  else { renderPipelineV2(); }
+}
+/* 表示に使うカード群（管理者×ONなら全員） */
+function pipeView(){
+  if(isAdminUser() && window._showAllDeals && window._allDeals) return window._allDeals;
+  return pipeline || [];
+}
+/* 他人のカードを編集 → クラウドに保存 */
+function saveForeignDeal(card){
+  if(!window._db || !card || !card.uid) return;
+  var d = JSON.parse(JSON.stringify(card)); d.updatedAt = Date.now();
+  window._db.collection('deals').doc(card.uid + '_' + card.id).set(d)
+    .then(function(){ toast('保存しました（クラウド）','ok'); loadAllDeals(); })
+    .catch(function(e){ console.error(e); toast('保存エラー: '+(e.message||e),'err'); });
+}
+function findDeal(id){
+  var local = (pipeline||[]).find(function(p){ return p.id===id; });
+  if(local) return local;
+  if(window._allDeals) return window._allDeals.find(function(p){ return p.id===id; });
+  return null;
+}
+
+function renderDealToggle(){
+  var el=document.getElementById('pipe2-admin-tools'); if(!el) return;
+  if(!isAdminUser()){ el.innerHTML=''; return; }
+  var on = !!window._showAllDeals;
+  el.innerHTML = '<button class="pipe2-add-manual" onclick="toggleAllDeals()" style="margin-left:8px;'+(on?'background:rgba(94,168,136,.22);border-color:rgba(94,168,136,.7);color:#9fe0c0':'')+'">\ud83d\udc65 '+(on?'全員の商談：ON':'全員の商談を表示')+'</button>'
+    + '<button class="pipe2-add-manual" onclick="fbUploadAllDeals()" style="margin-left:6px;border-color:rgba(212,175,55,.5);color:#f0d98c">\u2b06 既存カードを一括反映</button>';
+}
 function renderAdminAgg(){
   var el=document.getElementById('admin-agg');
   if(!el) return;
