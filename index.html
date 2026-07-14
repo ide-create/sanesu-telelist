@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ファネル改訂版53</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ファネル改訂版54</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -7735,7 +7735,8 @@ function renderPipeFunnel(pl){
     if(isAdminUser() && window._kpiDelta) calls += (window._kpiDelta.calls||0);
   }catch(e){ calls=0; }
   /* アポ・商談：アポ以降に進んだ全カード（契約含む） */
-  var appts=active.filter(function(p){return p.stage==='appt'||p.stage==='talking'||p.stage==='contract';}).length;
+  /* アポ・商談＝商談した全企業（進行中＋契約＋NG） */
+  var appts=active.filter(function(p){return p.stage==='talking'||p.stage==='contract'||p.stage==='lost';}).length;
   var cons =active.filter(function(p){return p.stage==='contract';}).length;
   var maxc=Math.max(calls,appts,cons,1);
   function fbar(lbl,cnt,color,rate){
