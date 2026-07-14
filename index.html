@@ -1287,13 +1287,13 @@ tr.row-contracted td:first-child{opacity:.55}
 .pipe2-kpi-lbl{font-size:.58rem;color:rgba(255,255,255,.38);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
 
 /* ─ レイアウト（カンバン＋サイドパネル） ─ */
-.pipe2-layout{display:flex;position:relative;min-height:360px;overflow:hidden}
-.pipe2-kb{flex:1;overflow-x:auto;display:flex;gap:10px;padding:10px 12px 20px;align-items:flex-start;-webkit-overflow-scrolling:touch}
+.pipe2-layout{display:flex;position:relative;min-height:360px}
+.pipe2-kb{flex:1;min-width:0;overflow-x:auto;display:flex;gap:10px;padding:10px 12px 20px;align-items:flex-start;-webkit-overflow-scrolling:touch}
 .pipe2-kb::-webkit-scrollbar{height:4px}
 .pipe2-kb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
 
 /* ─ カンバン列 ─ */
-.p2-col{flex:0 0 230px;display:flex;flex-direction:column;gap:6px}
+.p2-col{flex:1 1 0;min-width:180px;max-width:280px;display:flex;flex-direction:column;gap:6px}
 .p2-col-hd{display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:6px;position:sticky;top:0}
 .p2-col-icon{font-size:.95rem;flex-shrink:0}
 .p2-col-label{font-size:.72rem;font-weight:700;color:rgba(255,255,255,.65);flex:1;letter-spacing:.02em}
@@ -1323,7 +1323,7 @@ tr.row-contracted td:first-child{opacity:.55}
 .p2-card-act-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
 
 /* ─ サイドパネル ─ */
-.pipe2-side{position:relative;width:0;flex-shrink:0;transition:width .28s cubic-bezier(.22,1,.36,1);overflow:hidden;border-left:1px solid rgba(255,255,255,.06)}
+.pipe2-side{position:relative;z-index:120;width:0;flex-shrink:0;transition:width .28s cubic-bezier(.22,1,.36,1);overflow:hidden;border-left:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,#0e1a2e,#0a1320)}
 .pipe2-side.open{width:360px}
 .pipe2-side-inner{width:360px;height:100%;display:flex;flex-direction:column;background:rgba(5,8,16,.97);overflow:hidden}
 .pipe2-side-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
@@ -1392,7 +1392,7 @@ tr.row-contracted td:first-child{opacity:.55}
 .p2-lost-reapproach:hover{background:rgba(66,153,225,.15)}
 
 /* ─ サイドパネルオーバーレイ（スマホ） ─ */
-.pipe2-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.65);display:none;opacity:0;transition:opacity .25s}
+.pipe2-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.35);display:none;opacity:0;transition:opacity .25s}
 .pipe2-overlay.open{display:block;opacity:1}
 
 /* ─── アポ取得詳細モーダル ─── */
@@ -1424,7 +1424,7 @@ tr.row-contracted td:first-child{opacity:.55}
 .pipe2-add-manual:hover{background:rgba(46,99,166,.3);border-color:rgba(78,130,196,.85);color:#cfe2f6}
 @media(max-width:768px){
   .pipe2-side{position:fixed!important;right:0;top:0;bottom:0;z-index:110;width:0!important;max-width:95vw}
-  .pipe2-side.open{width:340px!important}
+  .pipe2-side.open{width:340px!important;z-index:130}
   .pipe2-side-inner{height:100vh!important}
   .pipe2-overlay{z-index:105}
 }
@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談編集版㊽</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談編集版㊾</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -7855,8 +7855,7 @@ function buildP2Card(c, stage) {
     </div>
     ${resultBtn}
     <button class="p2-card-move-btn" onclick="openMoveModal('${c.id}');event.stopPropagation()">⇄ ステージを移動</button>
-    <button onclick="deleteDealCard('${c.id}');event.stopPropagation()" title="この商談を削除"
-      style="width:100%;margin-top:5px;background:rgba(245,101,101,.08);border:1px solid rgba(245,101,101,.3);color:rgba(245,101,101,.9);border-radius:7px;padding:5px;font-size:.66rem;font-weight:600;cursor:pointer">🗑 削除</button>
+
   </div>`;
 }
 
