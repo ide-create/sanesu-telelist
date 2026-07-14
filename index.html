@@ -1077,7 +1077,7 @@ tr.row-contracted td:first-child{opacity:.55}
 .db-goal-bar{max-width:1440px;margin:0 auto;padding:6px 20px 0;display:flex;justify-content:flex-end}
 /* ─── 中段4列グリッド（進捗×3＋カレンダー） ─── */
 .db-main-grid{max-width:1440px;margin:0 auto;padding:8px 20px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:start}
-@media(max-width:1200px){.db-kpi-row{grid-template-columns:repeat(4,1fr)}.db-main-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:1200px){.db-kpi-row{grid-template-columns:repeat(4,1fr)}.db-main-grid{grid-template-columns:1fr}.db-main-grid>div:first-child{grid-column:span 1!important}}
 @media(max-width:768px){.db-kpi-row{grid-template-columns:repeat(2,1fr);padding:10px 14px 0}.db-main-grid{grid-template-columns:1fr;padding:8px 14px 0;gap:8px}}
 
 
@@ -2194,38 +2194,17 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 全員ファネル版55</span>
-  <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版56</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
 <div class="db-main-grid" id="db-main-grid">
 
-  <!-- 今週の進捗 -->
-  <div class="db-prog-section">
-    <div class="db-prog-sec-hd-wrap">
-      <div class="db-prog-sec-hd">📅 今週の進捗</div>
-      <div class="db-prog-sec-sub" id="db-week-range">—</div>
-    </div>
-    <div id="db-weekly-items"></div>
-  </div>
-
-  <!-- 今月の進捗 -->
-  <div class="db-prog-section">
-    <div class="db-prog-sec-hd-wrap">
-      <div class="db-prog-sec-hd">📆 今月の進捗</div>
-      <div class="db-prog-sec-sub" id="goal-period">—</div>
-    </div>
-    <div id="db-monthly-items"></div>
-  </div>
-
-  <!-- 半期の進捗 -->
-  <div class="db-prog-section">
-    <div class="db-prog-sec-hd-wrap">
-      <div class="db-prog-sec-hd">🎯 半期の進捗</div>
-      <div class="db-prog-sec-sub" id="db-half-range">2026年6月〜11月末</div>
-    </div>
-    <div id="db-half-items"></div>
+  <!-- 分析（ファネル・確度・停滞・ガント） -->
+  <div style="grid-column:span 3;display:flex;flex-direction:column;gap:12px;min-width:0">
+    <div id="db-stall"></div>
+    <div id="db-analysis"></div>
+    <div id="db-gantt"></div>
   </div>
 
   <!-- カレンダー -->
@@ -2431,9 +2410,9 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
     <!-- KPIバー -->
     <div class="pipe2-kpi-row" id="pipe2-kpi-row"></div>
-    <div id="pipe2-action-bar" style="max-width:1440px;margin:0 auto 14px;padding:0 20px"></div>
-    <div id="pipe2-analysis" style="max-width:1440px;margin:0 auto 14px;padding:0 20px"></div>
-    <div id="pipe2-gantt" style="max-width:1440px;margin:0 auto 14px;padding:0 20px"></div>
+    <div id="pipe2-action-bar" style="display:none"></div>
+    <div id="pipe2-analysis" style="display:none"></div>
+    <div id="pipe2-gantt" style="display:none"></div>
 
     <!-- メインレイアウト（カンバン＋サイドパネル） -->
     <div class="pipe2-layout" id="pipe2-layout">
@@ -3444,7 +3423,7 @@ function renderAll() {
   renderSchedule();
   updateBadges();
   renderTodayTasks();
-  renderGoalSection();
+  try{ renderDashAnalytics(); }catch(e){}
   renderDashboard3Col();
 }
 
@@ -7671,9 +7650,7 @@ function _renderPipelineV2Impl() {
   const pipeline = areaFilter(pipeView());
   try { renderDealToggle(); } catch(e){ console.error(e); }
   renderPipeKpi();
-  try { renderPipeActionBar(pipeline); } catch(e){ console.error(e); }
-  try { renderPipeFunnel(pipeline); } catch(e){ console.error(e); }
-  try { renderPipeGantt(pipeline); } catch(e){ console.error(e); }
+  try { renderDashAnalytics(); } catch(e){ console.error(e); }
   const kb = document.getElementById('pipe2-kb');
   if (!kb) return;
 
@@ -7721,8 +7698,44 @@ function _renderPipelineV2Impl() {
   if (cntC) cntC.textContent = pipeline.filter(p => p && p.stage==='contract').length;
 }
 
-function renderPipeFunnel(pl){
-  var el=document.getElementById('pipe2-analysis'); if(!el) return;
+/* ═══ 停滞アラート ═══ */
+function renderStallAlert(pl, targetId){
+  var el=document.getElementById(targetId||'db-stall'); if(!el) return;
+  var today=(typeof getTodayStr==='function')?getTodayStr():new Date().toISOString().slice(0,10);
+  var t0=new Date(today+'T00:00');
+  var stalled=(pl||[]).filter(function(p){
+    if(!p || p.stage!=='talking') return false;
+    var last = p.nextDate || p.meetingDate || p.createdAt || '';
+    if(!last) return false;
+    var d=new Date((last+'').slice(0,10)+'T00:00');
+    if(isNaN(d)) return false;
+    return Math.round((t0-d)/86400000) >= 14;   /* 14日以上動きなし */
+  }).map(function(p){
+    var last=(p.nextDate||p.meetingDate||p.createdAt||'').slice(0,10);
+    var days=Math.round((t0-new Date(last+'T00:00'))/86400000);
+    return {p:p, days:days};
+  }).sort(function(a,b){ return b.days-a.days; });
+  if(!stalled.length){ el.innerHTML=''; return; }
+  var items=stalled.map(function(s){
+    return '<div onclick="goTab(\'p\');setTimeout(function(){openPipeDetailV2(\''+s.p.id+'\')},250)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(207,128,128,.08);border:1px solid rgba(207,128,128,.28)">'
+      +'<span style="font-size:.62rem;font-weight:700;color:#cf8080;white-space:nowrap">'+s.days+'日 停滞</span>'
+      +'<span style="font-size:.82rem;color:#fff;font-weight:600">'+esc(s.p.company||'')+'</span>'
+      +'<span style="font-size:.68rem;color:rgba(255,255,255,.5)">'+(s.p.nextAction?esc(s.p.nextAction):'次アクション未設定')+'</span></div>';
+  }).join('');
+  el.innerHTML='<div class="glass" style="padding:14px 16px"><div style="font-weight:700;color:#cf8080;font-size:.88rem;margin-bottom:8px">⚠️ 停滞アラート（'+stalled.length+'件）<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:6px">14日以上動きのない商談</span></div><div style="display:flex;flex-direction:column;gap:6px">'+items+'</div></div>';
+}
+/* ダッシュボードの分析エリアを描画 */
+function renderDashAnalytics(){
+  try{
+    var pl = areaFilter(pipeView());
+    renderStallAlert(pl, 'db-stall');
+    renderPipeFunnel(pl, 'db-analysis');
+    renderPipeGantt(pl, 'db-gantt');
+  }catch(e){ console.error('dash analytics', e); }
+}
+
+function renderPipeFunnel(pl, targetId){
+  var el=document.getElementById(targetId||'pipe2-analysis'); if(!el) return;
   var active=(pl||[]).filter(function(p){return p&&p.stage;});
   var admin=isAdminUser();
   /* ── 架電数 ── */
@@ -7766,8 +7779,8 @@ function renderPipeFunnel(pl){
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル'+scope+'</div>'+funnel+'</div>'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🎯 確度サマリー（進行中の商談）</div>'+summary+'</div></div>';
 }
-function renderPipeGantt(pl){
-  var el=document.getElementById('pipe2-gantt'); if(!el) return;
+function renderPipeGantt(pl, targetId){
+  var el=document.getElementById(targetId||'pipe2-gantt'); if(!el) return;
   var today=(typeof getTodayStr==='function')?getTodayStr():new Date().toISOString().slice(0,10);
   var t0=new Date(today+'T00:00'); var start=new Date(t0); start.setDate(start.getDate()-3); var span=42;
   function pos(dstr){ var d=new Date((dstr+'').slice(0,10)+'T00:00'); return ((d-start)/86400000)/span*100; }
@@ -7784,13 +7797,13 @@ function renderPipeGantt(pl){
     if(overdue){ var bl=Math.max(0,Math.min(97,dp)); bar='<div style="position:absolute;left:'+bl+'%;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;background:'+col+';border:2px solid #ff5b5b;box-shadow:0 0 8px #ff5b5b"></div>'; }
     else { var l=Math.max(0,todayPos), rr=Math.max(l+1.5,Math.min(99,dp)); bar='<div style="position:absolute;left:'+l+'%;width:'+(rr-l)+'%;top:50%;transform:translateY(-50%);height:11px;border-radius:6px;background:linear-gradient(90deg,'+col+'55,'+col+');box-shadow:0 0 6px '+col+'66"></div><div style="position:absolute;left:'+rr+'%;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:'+col+';box-shadow:0 0 8px '+col+'"></div>'; }
     var label='<span style="position:absolute;left:'+Math.min(99,dp)+'%;top:50%;transform:translateY(-50%);margin-left:10px;font-size:.62rem;color:'+col+';font-weight:600;white-space:nowrap">'+dstr.slice(5).replace('-','/')+' · '+prob+'% '+esc(p.nextAction||'')+'</span>';
-    return '<div style="display:flex;align-items:center;height:32px;border-bottom:1px solid rgba(255,255,255,.04)">'
-      +'<div onclick="openPipeDetailV2(\''+p.id+'\')" style="width:130px;flex-shrink:0;font-size:.72rem;color:#dce9fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;cursor:pointer">'+esc(p.company||'')+'</div>'
+    return '<div style="display:flex;align-items:center;height:38px;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<div onclick="openPipeDetailV2(\''+p.id+'\')" style="width:160px;flex-shrink:0;font-size:.78rem;color:#dce9fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;cursor:pointer;font-weight:600">'+esc(p.company||'')+'</div>'
       +'<div onclick="openPipeDetailV2(\''+p.id+'\')" style="position:relative;flex:1;height:100%;cursor:pointer"><div style="position:absolute;left:'+todayPos+'%;top:0;bottom:0;width:2px;background:rgba(255,120,120,.45)"></div>'+bar+label+'</div></div>';
   }).join('');
   el.innerHTML='<div class="glass" style="padding:14px 16px;overflow-x:auto"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:4px">\ud83d\udcca 今後のアクション（ガント）</div>'
     +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:10px">バーの色＝受注確度（<span style="color:#5ea888">高80%+</span>／<span style="color:#c9b25e">中50-79%</span>／<span style="color:#cf8080">低50%未満</span>）　赤縦線＝本日</div>'
-    +'<div style="display:flex"><div style="width:130px;flex-shrink:0"></div><div style="position:relative;flex:1;height:16px">'+hdr+'</div></div><div>'+rowsHtml+'</div></div>';
+    +'<div style="display:flex"><div style="width:160px;flex-shrink:0"></div><div style="position:relative;flex:1;height:16px">'+hdr+'</div></div><div>'+rowsHtml+'</div></div>';
 }
 function buildNextActionHtml(c){
   if(!c || !c.nextDate) return '';
