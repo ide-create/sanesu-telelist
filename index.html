@@ -1067,17 +1067,17 @@ tr.row-contracted td:first-child{opacity:.55}
 
 /* 3-カラムコンテナ（20% / 52% / 28%） */
 /* ─── KPI 横一列（7枚） ─── */
-.db-kpi-row{max-width:1440px;margin:0 auto;padding:14px 20px 0;display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.db-kpi-row{max-width:1800px;margin:0 auto;padding:14px 20px 0;display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
 .db-kpi-row .kpi-card{padding:12px 14px 10px!important;min-height:auto!important}
 .db-kpi-row .kpi-icon{font-size:1.15rem!important;margin-bottom:5px!important}
 .db-kpi-row .kpi-val{font-size:1.85rem!important;margin-bottom:3px!important}
 .db-kpi-row .kpi-lbl{font-size:.62rem!important;letter-spacing:.04em!important}
 .db-kpi-row .kpi-sub{font-size:.55rem!important;margin-top:2px!important}
 /* ─── 目標設定バー ─── */
-.db-goal-bar{max-width:1440px;margin:0 auto;padding:6px 20px 0;display:flex;justify-content:flex-end}
+.db-goal-bar{max-width:1800px;margin:0 auto;padding:6px 20px 0;display:flex;justify-content:flex-end}
 /* ─── 中段4列グリッド（進捗×3＋カレンダー） ─── */
-.db-main-grid{max-width:1440px;margin:0 auto;padding:8px 20px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:start}
-@media(max-width:1200px){.db-kpi-row{grid-template-columns:repeat(4,1fr)}.db-main-grid{grid-template-columns:1fr}.db-main-grid>div:first-child{grid-column:span 1!important}}
+.db-main-grid{max-width:1800px;margin:0 auto;padding:8px 24px 0;display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+@media(max-width:1200px){.db-main-grid{grid-template-columns:1fr}}
 @media(max-width:768px){.db-kpi-row{grid-template-columns:repeat(2,1fr);padding:10px 14px 0}.db-main-grid{grid-template-columns:1fr;padding:8px 14px 0;gap:8px}}
 
 
@@ -2147,7 +2147,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 </div>
 
 <!-- ═══ KPI 横一列（7枚） ═══ -->
-<div class="db-kpi-row">
+<div class="db-kpi-row" style="display:none">
   <div class="kpi-card kc-total">
     <div class="kpi-icon">📞</div>
     <div class="kpi-val" id="s-total">0</div>
@@ -2194,17 +2194,20 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版56</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版58</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
 <div class="db-main-grid" id="db-main-grid">
 
   <!-- 分析（ファネル・確度・停滞・ガント） -->
-  <div style="grid-column:span 3;display:flex;flex-direction:column;gap:12px;min-width:0">
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
     <div id="db-stall"></div>
     <div id="db-analysis"></div>
-    <div id="db-gantt"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch">
+      <div id="db-gantt"></div>
+      <div id="db-trend"></div>
+    </div>
   </div>
 
   <!-- カレンダー -->
@@ -7699,30 +7702,106 @@ function _renderPipelineV2Impl() {
 }
 
 /* ═══ 停滞アラート ═══ */
+/* ═══ 月別推移（架電・アポ・契約） ═══ */
+function renderMonthlyTrend(targetId){
+  var el=document.getElementById(targetId||'db-trend'); if(!el) return;
+  var admin=isAdminUser();
+  /* 直近6か月 */
+  var now=new Date(), months=[];
+  for(var i=5;i>=0;i--){ var d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'月'}); }
+  var data={};
+  months.forEach(function(m){ data[m.key]={call:0,appt:0,contract:0}; });
+  /* ローカル（自分）の記録 */
+  try{
+    (salesList||[]).forEach(function(s){ (s.calls||[]).forEach(function(c){ var k=(c.date||'').slice(0,7); if(data[k]) data[k].call++; }); });
+    (callList||[]).forEach(function(c){ (c.callHistory||[]).forEach(function(h){ var k=((h.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
+    (pipeline||[]).forEach(function(p){
+      var mk=((p.meetingDate||p.createdAt||'')+'').slice(0,7);
+      if(data[mk] && (p.stage==='talking'||p.stage==='contract'||p.stage==='lost')) data[mk].appt++;
+      var ck=((p.contractDate||'')+'').slice(0,7);
+      if(data[ck] && p.stage==='contract') data[ck].contract++;
+    });
+  }catch(e){}
+  /* 管理者：他メンバーのクラウド分を合算 */
+  if(admin && window._allActivity){
+    window._allActivity.forEach(function(e){
+      if((e.email||'')===window.ADMIN_EMAIL) return;
+      var k=((e.day||'')+'').slice(0,7);
+      if(!data[k]) return;
+      if(e.type==='call') data[k].call++;
+      else if(e.type==='appt') data[k].appt++;
+      else if(e.type==='contract') data[k].contract++;
+    });
+  }
+  var maxV=1;
+  months.forEach(function(m){ var d=data[m.key]; maxV=Math.max(maxV,d.call,d.appt*5,d.contract*10); });
+  var W=100, H=110;
+  function pts(key,scale){
+    return months.map(function(m,i){
+      var v=data[m.key][key]*(scale||1);
+      var x=(i/(months.length-1))*W;
+      var y=H-(v/maxV)*H;
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+  }
+  function dots(key,scale,col){
+    return months.map(function(m,i){
+      var v=data[m.key][key]*(scale||1);
+      var x=(i/(months.length-1))*W;
+      var y=H-(v/maxV)*H;
+      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.8" fill="'+col+'"/>';
+    }).join('');
+  }
+  var labels=months.map(function(m,i){
+    var x=(i/(months.length-1))*W;
+    return '<text x="'+x.toFixed(1)+'" y="'+(H+9)+'" font-size="5" fill="rgba(255,255,255,.4)" text-anchor="middle">'+m.label+'</text>';
+  }).join('');
+  var cur=data[months[months.length-1].key];
+  var svg='<svg viewBox="0 -6 '+W+' '+(H+18)+'" style="width:100%;height:170px;overflow:visible">'
+    +'<polyline points="'+pts('call',1)+'" fill="none" stroke="#3d6fa8" stroke-width="1.6"/>'+dots('call',1,'#3d6fa8')
+    +'<polyline points="'+pts('appt',5)+'" fill="none" stroke="#5ea888" stroke-width="1.6"/>'+dots('appt',5,'#5ea888')
+    +'<polyline points="'+pts('contract',10)+'" fill="none" stroke="#c9b25e" stroke-width="1.6"/>'+dots('contract',10,'#c9b25e')
+    +labels+'</svg>';
+  var legend='<div style="display:flex;gap:14px;justify-content:center;margin-top:6px;font-size:.62rem">'
+    +'<span style="color:#3d6fa8">● 架電 '+cur.call+'</span>'
+    +'<span style="color:#5ea888">● アポ '+cur.appt+'</span>'
+    +'<span style="color:#c9b25e">● 契約 '+cur.contract+'</span></div>';
+  el.innerHTML='<div class="glass" style="padding:18px 20px;height:100%"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📈 月別推移</div>'
+    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">直近6か月（今月の数字を凡例に表示）</div>'+svg+legend+'</div>';
+}
+
 function renderStallAlert(pl, targetId){
   var el=document.getElementById(targetId||'db-stall'); if(!el) return;
   var today=(typeof getTodayStr==='function')?getTodayStr():new Date().toISOString().slice(0,10);
   var t0=new Date(today+'T00:00');
-  var stalled=(pl||[]).filter(function(p){
-    if(!p || p.stage!=='talking') return false;
-    var last = p.nextDate || p.meetingDate || p.createdAt || '';
-    if(!last) return false;
-    var d=new Date((last+'').slice(0,10)+'T00:00');
-    if(isNaN(d)) return false;
-    return Math.round((t0-d)/86400000) >= 14;   /* 14日以上動きなし */
-  }).map(function(p){
-    var last=(p.nextDate||p.meetingDate||p.createdAt||'').slice(0,10);
-    var days=Math.round((t0-new Date(last+'T00:00'))/86400000);
-    return {p:p, days:days};
-  }).sort(function(a,b){ return b.days-a.days; });
-  if(!stalled.length){ el.innerHTML=''; return; }
-  var items=stalled.map(function(s){
-    return '<div onclick="goTab(\'p\');setTimeout(function(){openPipeDetailV2(\''+s.p.id+'\')},250)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(207,128,128,.08);border:1px solid rgba(207,128,128,.28)">'
-      +'<span style="font-size:.62rem;font-weight:700;color:#cf8080;white-space:nowrap">'+s.days+'日 停滞</span>'
-      +'<span style="font-size:.82rem;color:#fff;font-weight:600">'+esc(s.p.company||'')+'</span>'
-      +'<span style="font-size:.68rem;color:rgba(255,255,255,.5)">'+(s.p.nextAction?esc(s.p.nextAction):'次アクション未設定')+'</span></div>';
+  /* 商談中（NG・契約は除く）で、次回アクション or 次回予定日があるもの */
+  var rows=(pl||[]).filter(function(p){
+    return p && p.stage==='talking' && (p.nextAction || p.nextDate);
+  }).sort(function(a,b){
+    var da=(a.nextDate||'9999'), db=(b.nextDate||'9999');
+    return (da+'').localeCompare(db+'');
+  });
+  if(!rows.length){ el.innerHTML='<div class="glass" style="padding:16px;text-align:center;color:var(--text-muted);font-size:.8rem">商談カードに「次のアクション」を入力すると、ここに一覧表示されます</div>'; return; }
+  var items=rows.map(function(p){
+    var nd=(p.nextDate||'').slice(0,10);
+    var col='#8fc0f0', tag='';
+    if(nd){
+      var diff=Math.round((new Date(nd+'T00:00')-t0)/86400000);
+      if(diff<0){ col='#cf8080'; tag='期限切れ'; }
+      else if(diff===0){ col='#e0a860'; tag='本日'; }
+      else if(diff<=3){ col='#c9b25e'; tag='まもなく'; }
+      else { col='#7fb0d8'; tag=''; }
+    }
+    var prob=parseInt(p.probability)||0;
+    var pcol=prob>=80?'#5ea888':prob>=50?'#c9b25e':'#cf8080';
+    return '<div onclick="goTab(\'p\');setTimeout(function(){openPipeDetailV2(\''+p.id+'\')},250)" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(120,160,220,.18)">'
+      +'<span style="min-width:52px;text-align:center;font-size:.72rem;font-weight:800;color:'+pcol+';border:1px solid '+pcol+'55;border-radius:12px;padding:3px 6px">'+prob+'%</span>'
+      +'<span style="font-size:.95rem;color:#fff;font-weight:700;min-width:170px">'+esc(p.company||'')+'</span>'
+      +'<span style="flex:1;font-size:.85rem;color:#cfe0f5">'+esc(p.nextAction||'（アクション未記入）')+'</span>'
+      +(nd?'<span style="font-size:.75rem;font-weight:700;color:'+col+';white-space:nowrap">'+(tag?tag+' ':'')+nd.slice(5).replace('-','/')+'</span>':'<span style="font-size:.7rem;color:var(--text-muted)">日付未設定</span>')
+      +'</div>';
   }).join('');
-  el.innerHTML='<div class="glass" style="padding:14px 16px"><div style="font-weight:700;color:#cf8080;font-size:.88rem;margin-bottom:8px">⚠️ 停滞アラート（'+stalled.length+'件）<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:6px">14日以上動きのない商談</span></div><div style="display:flex;flex-direction:column;gap:6px">'+items+'</div></div>';
+  el.innerHTML='<div class="glass" style="padding:18px 20px"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:12px">📌 次回アクション（'+rows.length+'件）<span style="font-size:.62rem;color:var(--text-muted);font-weight:400;margin-left:8px">商談中の企業</span></div><div style="display:flex;flex-direction:column;gap:8px">'+items+'</div></div>';
 }
 /* ダッシュボードの分析エリアを描画 */
 function renderDashAnalytics(){
@@ -7731,7 +7810,17 @@ function renderDashAnalytics(){
     renderStallAlert(pl, 'db-stall');
     renderPipeFunnel(pl, 'db-analysis');
     renderPipeGantt(pl, 'db-gantt');
+    renderMonthlyTrend('db-trend');
   }catch(e){ console.error('dash analytics', e); }
+}
+/* 管理者：月別推移用に全員のactivityを取得 */
+function loadAllActivity(){
+  if(!isAdminUser() || !window._db) return;
+  window._db.collection('activity').get().then(function(snap){
+    var arr=[]; snap.forEach(function(d){ arr.push(d.data()); });
+    window._allActivity=arr;
+    try{ renderMonthlyTrend('db-trend'); }catch(e){}
+  }).catch(function(e){ console.error(e); });
 }
 
 function renderPipeFunnel(pl, targetId){
@@ -7775,35 +7864,46 @@ function renderPipeFunnel(pl, targetId){
   function chip(lbl,val,color){ return '<div style="flex:1;text-align:center;padding:14px 6px;background:rgba(255,255,255,.03);border-radius:8px;border-top:2px solid '+color+'"><div style="font-size:1.6rem;font-weight:800;color:'+color+'">'+val+'</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:2px">'+lbl+'</div></div>'; }
   var summary='<div style="display:flex;gap:8px">'
     +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>';
-  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+  el.innerHTML='<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px">'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル'+scope+'</div>'+funnel+'</div>'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🎯 確度サマリー（進行中の商談）</div>'+summary+'</div></div>';
 }
 function renderPipeGantt(pl, targetId){
   var el=document.getElementById(targetId||'pipe2-gantt'); if(!el) return;
   var today=(typeof getTodayStr==='function')?getTodayStr():new Date().toISOString().slice(0,10);
-  var t0=new Date(today+'T00:00'); var start=new Date(t0); start.setDate(start.getDate()-3); var span=42;
-  function pos(dstr){ var d=new Date((dstr+'').slice(0,10)+'T00:00'); return ((d-start)/86400000)/span*100; }
-  function pcol(p){ p=parseInt(p)||0; return p>=80?'#5ea888':p>=50?'#c9b25e':'#cf8080'; }
-  var rows=(pl||[]).filter(function(p){return p&&p.stage!=='contract'&&p.stage!=='lost'&&(p.nextDate||p.meetingDate);})
-    .map(function(p){return {p:p,date:(p.nextDate||p.meetingDate)};})
-    .filter(function(r){var pc=pos(r.date);return pc>=-8&&pc<=105;})
-    .sort(function(a,b){return (a.date+'').localeCompare(b.date+'');});
-  if(!rows.length){ el.innerHTML='<div class="glass" style="padding:16px;color:var(--text-muted);font-size:.8rem;text-align:center">\ud83d\udcca 次回予定日・アポ日を入力すると、ここにガントで表示されます</div>'; return; }
-  var hdr=''; for(var w=0;w<7;w++){var wd=new Date(start);wd.setDate(wd.getDate()+w*7);hdr+='<div style="position:absolute;left:'+(w*7/span*100)+'%;font-size:.6rem;color:rgba(255,255,255,.4);border-left:1px solid rgba(255,255,255,.08);padding-left:4px;height:100%">'+((wd.getMonth()+1)+'/'+wd.getDate())+'</div>';}
-  var todayPos=pos(today);
-  var rowsHtml=rows.map(function(r){
-    var p=r.p, dstr=(r.date+'').slice(0,10), prob=parseInt(p.probability)||0, col=pcol(prob), overdue=dstr<today, dp=pos(dstr), bar='';
-    if(overdue){ var bl=Math.max(0,Math.min(97,dp)); bar='<div style="position:absolute;left:'+bl+'%;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;background:'+col+';border:2px solid #ff5b5b;box-shadow:0 0 8px #ff5b5b"></div>'; }
-    else { var l=Math.max(0,todayPos), rr=Math.max(l+1.5,Math.min(99,dp)); bar='<div style="position:absolute;left:'+l+'%;width:'+(rr-l)+'%;top:50%;transform:translateY(-50%);height:11px;border-radius:6px;background:linear-gradient(90deg,'+col+'55,'+col+');box-shadow:0 0 6px '+col+'66"></div><div style="position:absolute;left:'+rr+'%;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:'+col+';box-shadow:0 0 8px '+col+'"></div>'; }
-    var label='<span style="position:absolute;left:'+Math.min(99,dp)+'%;top:50%;transform:translateY(-50%);margin-left:10px;font-size:.62rem;color:'+col+';font-weight:600;white-space:nowrap">'+dstr.slice(5).replace('-','/')+' · '+prob+'% '+esc(p.nextAction||'')+'</span>';
-    return '<div style="display:flex;align-items:center;height:38px;border-bottom:1px solid rgba(255,255,255,.04)">'
-      +'<div onclick="openPipeDetailV2(\''+p.id+'\')" style="width:160px;flex-shrink:0;font-size:.78rem;color:#dce9fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;cursor:pointer;font-weight:600">'+esc(p.company||'')+'</div>'
-      +'<div onclick="openPipeDetailV2(\''+p.id+'\')" style="position:relative;flex:1;height:100%;cursor:pointer"><div style="position:absolute;left:'+todayPos+'%;top:0;bottom:0;width:2px;background:rgba(255,120,120,.45)"></div>'+bar+label+'</div></div>';
+  var t0=new Date(today+'T00:00');
+  var rows=(pl||[]).filter(function(p){ return p && p.stage==='talking'; }).map(function(p){
+    var startRaw = (p.meetingDate||p.createdAt||'')+'';
+    var start = startRaw.slice(0,10);
+    var sd = new Date(start+'T00:00');
+    if(isNaN(sd)) return null;
+    var elapsed = Math.max(0, Math.round((t0-sd)/86400000));
+    var nd = (p.nextDate||'').slice(0,10);
+    return {p:p, start:start, elapsed:elapsed, next:nd};
+  }).filter(Boolean).sort(function(a,b){ return b.elapsed-a.elapsed; });
+  if(!rows.length){ el.innerHTML='<div class="glass" style="padding:18px;color:var(--text-muted);font-size:.8rem;text-align:center">商談中の企業がここにタイムラインで表示されます</div>'; return; }
+  var maxD = Math.max(30, rows[0].elapsed + 14);
+  function pct(d){ return Math.max(0, Math.min(100, d/maxD*100)); }
+  var rowsHtml = rows.map(function(r){
+    var p=r.p, prob=parseInt(p.probability)||0;
+    var col = prob>=80?'#5ea888':prob>=50?'#c9b25e':'#cf8080';
+    var w = pct(r.elapsed);
+    var stall = r.elapsed>=14;
+    var nextTxt = r.next ? ('次: '+r.next.slice(5).replace('-','/')+(p.nextAction?(' '+p.nextAction):'')) : (p.nextAction||'');
+    return '<div onclick="goTab(\'p\');setTimeout(function(){openPipeDetailV2(\''+p.id+'\')},250)" style="cursor:pointer;display:flex;align-items:center;height:44px;gap:12px;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<div style="width:170px;flex-shrink:0;font-size:.85rem;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.company||'')+'</div>'
+      +'<div style="flex:1;position:relative;height:18px;background:rgba(255,255,255,.03);border-radius:9px;min-width:0">'
+        +'<div style="position:absolute;left:0;top:0;bottom:0;width:'+Math.max(3,w)+'%;border-radius:9px;background:linear-gradient(90deg,'+col+'55,'+col+');box-shadow:0 0 8px '+col+'44"></div>'
+        +'<div style="position:absolute;left:'+Math.max(3,w)+'%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:'+col+';box-shadow:0 0 8px '+col+'"></div>'
+      +'</div>'
+      +'<div style="width:92px;flex-shrink:0;text-align:right;font-size:.72rem;font-weight:700;color:'+(stall?'#cf8080':'var(--text-muted)')+'">'+r.elapsed+'日経過</div>'
+      +'<div style="width:52px;flex-shrink:0;text-align:center;font-size:.72rem;font-weight:800;color:'+col+'">'+prob+'%</div>'
+      +'</div>'
+      + (nextTxt ? '' : '');
   }).join('');
-  el.innerHTML='<div class="glass" style="padding:14px 16px;overflow-x:auto"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:4px">\ud83d\udcca 今後のアクション（ガント）</div>'
-    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:10px">バーの色＝受注確度（<span style="color:#5ea888">高80%+</span>／<span style="color:#c9b25e">中50-79%</span>／<span style="color:#cf8080">低50%未満</span>）　赤縦線＝本日</div>'
-    +'<div style="display:flex"><div style="width:160px;flex-shrink:0"></div><div style="position:relative;flex:1;height:16px">'+hdr+'</div></div><div>'+rowsHtml+'</div></div>';
+  el.innerHTML='<div class="glass" style="padding:18px 20px"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📊 商談タイムライン</div>'
+    +'<div style="font-size:.64rem;color:var(--text-muted);margin-bottom:12px">アポ取得からの経過日数（バーが長い＝動いていない）／色＝受注確度</div>'
+    +rowsHtml+'</div>';
 }
 function buildNextActionHtml(c){
   if(!c || !c.nextDate) return '';
@@ -9902,6 +10002,7 @@ bootApp = function() {
   try { _migrateHoldStage(); } catch(e) {}
   try { goTab('sl'); } catch(e) {}
   try { if(isAdminUser()){ refreshAdminKpiBoard(); if(!window.__kpiTimer) window.__kpiTimer=setInterval(refreshAdminKpiBoard, 60000); } } catch(e){}
+  try { if(isAdminUser()) loadAllActivity(); } catch(e){}
 };
 </script>
 </body>
