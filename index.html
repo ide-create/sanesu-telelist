@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談編集版㊾</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 4列版52</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2651,7 +2651,6 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
             <option value="appt">🆕 アポイント取得</option>
             <option value="talking">🤝 商談</option>
             <option value="contract">🎉 契約</option>
-            <option value="hold">⭐ 見込み企業</option>
             <option value="lost">🚫 新規NG</option>
           </select>
         </div>
@@ -2802,8 +2801,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
               <option value="appt">🆕 アポイント取得</option>
               <option value="talking">🤝 商談</option>
               <option value="contract">🎉 契約</option>
-              <option value="hold">⭐ 見込み企業</option>
-              <option value="lost">🚫 新規NG</option>
+                <option value="lost">🚫 新規NG</option>
             </select>
           </div>
           <div class="field">
@@ -2929,7 +2927,6 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
           <button class="res-type-btn" id="res-btn-lost"     onclick="selectResultType('lost')">🚫<br>新規NG</button>
           <button class="res-type-btn" id="res-btn-talking"  onclick="selectResultType('talking')">🤝<br>継続商談（再訪問あり）</button>
           <button class="res-type-btn" id="res-btn-revisit"  onclick="selectResultType('revisit')">📅<br>再訪問が必要</button>
-          <button class="res-type-btn" id="res-btn-hold"     onclick="selectResultType('hold')">⭐<br>見込み企業</button>
         </div>
       </div>
       <!-- 契約獲得フォーム -->
@@ -7582,12 +7579,17 @@ const STAGE_COLORS = {
 };
 
 /* ─── PIPELINE 3列定義 ─── */
+/* 旧「見込み企業」ステージは廃止 → 新規NGへ寄せる */
+function _migrateHoldStage(){
+  var n=0;
+  (pipeline||[]).forEach(function(p){ if(p && p.stage==='hold'){ p.stage='lost'; n++; } });
+  if(n) { try{ save(); }catch(e){} }
+}
 const PIPE_STAGES = [
   {id:'appt',    icon:'🆕', label:'アポイント取得', color:'rgba(66,153,225,.65)'},
   {id:'talking', icon:'🤝', label:'商談',         color:'rgba(159,122,234,.65)'},
   {id:'contract',icon:'🎉', label:'契約',         color:'rgba(0,255,136,.7)'},
   {id:'lost',    icon:'🚫', label:'新規NG',       color:'rgba(245,101,101,.6)'},
-  {id:'hold',    icon:'⭐', label:'見込み企業',    color:'rgba(237,200,90,.6)'},
 ];
 
 let p2OpenId   = null;  // 開いているサイドパネルの商談ID
@@ -7725,11 +7727,11 @@ function renderPipeFunnel(pl){
   var tot=appt+talk+con, maxc=Math.max(appt,talk,con,1);
   function fbar(lbl,cnt,color,rate){
     var w=Math.round(cnt/maxc*100);
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-      +'<div style="width:74px;font-size:.72rem;color:#dce9fa;flex-shrink:0">'+lbl+'</div>'
-      +'<div style="flex:1;height:26px;background:rgba(255,255,255,.04);border-radius:6px;position:relative;overflow:hidden">'
-      +'<div style="height:100%;width:'+Math.max(6,w)+'%;background:linear-gradient(90deg,'+color+'aa,'+color+');border-radius:6px;display:flex;align-items:center;padding-left:10px"><span style="font-size:.78rem;color:#fff;font-weight:700">'+cnt+'</span></div></div>'
-      +'<div style="width:96px;font-size:.6rem;color:var(--text-muted);flex-shrink:0;text-align:right">'+(rate||'')+'</div></div>';
+    return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">'
+      +'<div style="width:82px;font-size:.78rem;color:#dce9fa;flex-shrink:0;font-weight:600">'+lbl+'</div>'
+      +'<div style="flex:1;height:34px;background:rgba(255,255,255,.04);border-radius:8px;position:relative;overflow:hidden">'
+      +'<div style="height:100%;width:'+Math.max(9,w)+'%;background:linear-gradient(90deg,'+color+'99,'+color+');border-radius:8px;display:flex;align-items:center;padding-left:12px"><span style="font-size:1.05rem;color:#fff;font-weight:800">'+cnt+'</span></div></div>'
+      +'<div style="width:104px;font-size:.64rem;color:var(--text-muted);flex-shrink:0;text-align:right;line-height:1.3">'+(rate||'')+'</div></div>';
   }
   var funnel=fbar('\ud83c\udd95 アポ取得',appt,'#3d6fa8','')
     +fbar('\ud83e\udd1d 商談中',talk,'#3f89c8', tot?('アポ→商談 '+Math.round(talk/tot*100)+'%'):'')
@@ -7738,11 +7740,10 @@ function renderPipeFunnel(pl){
   var hi=deals.filter(function(p){return (parseInt(p.probability)||0)>=80;}).length;
   var mid=deals.filter(function(p){var n=parseInt(p.probability)||0;return n>=50&&n<80;}).length;
   var lo=deals.filter(function(p){return (parseInt(p.probability)||0)<50;}).length;
-  var pred=deals.reduce(function(s,p){return s+parseAmt(p.amount)*(parseInt(p.probability)||0)/100;},0);
   function chip(lbl,val,color){ return '<div style="flex:1;text-align:center;padding:10px 6px;background:rgba(255,255,255,.03);border-radius:8px;border-top:2px solid '+color+'"><div style="font-size:1.4rem;font-weight:800;color:'+color+'">'+val+'</div><div style="font-size:.56rem;color:var(--text-muted)">'+lbl+'</div></div>'; }
   var summary='<div style="display:flex;gap:8px;margin-bottom:10px">'
     +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>'
-    +'<div style="text-align:center;padding:10px;background:rgba(74,144,217,.08);border-radius:8px"><span style="font-size:.64rem;color:var(--text-muted)">予想売上（確度加重）</span><br><span style="font-size:1.4rem;font-weight:800;color:#8fc0f0">'+(pred>0?('約'+fmtAmt(Math.round(pred))+'円'):'—')+'</span></div>';
+        ;
   el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">\ud83d\udd3b パイプライン ファネル</div>'+funnel+'</div>'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">\ud83c\udfaf 確度サマリー</div>'+summary+'</div></div>';
@@ -9867,6 +9868,7 @@ bootApp = function() {
   initTableReveal();
   const notice = document.getElementById('api-key-notice');
   if (notice) notice.style.display = googleApiKey ? 'none' : 'block';
+  try { _migrateHoldStage(); } catch(e) {}
   try { goTab('sl'); } catch(e) {}
   try { if(isAdminUser()){ refreshAdminKpiBoard(); if(!window.__kpiTimer) window.__kpiTimer=setInterval(refreshAdminKpiBoard, 60000); } } catch(e){}
 };
