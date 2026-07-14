@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版60</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 月別修正版61</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -7718,8 +7718,13 @@ function renderMonthlyTrend(targetId){
   var data={}; months.forEach(function(mm){ data[mm.key]={call:0,appt:0}; });
   /* 自分のローカル記録 */
   try{
-    (salesList||[]).forEach(function(s2){ (s2.calls||[]).forEach(function(c){ var k=((c.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
-    (callList||[]).forEach(function(c){ (c.callHistory||[]).forEach(function(h){ var k=((h.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
+    var FALLBACK='2026-06';
+    function mkey(d){ var k=((d||'')+'').slice(0,7); return (data[k]?k:(data[FALLBACK]?FALLBACK:null)); }
+    (salesList||[]).forEach(function(s2){ (s2.calls||[]).forEach(function(c){ var k=mkey(c.date); if(k) data[k].call++; }); });
+    (callList||[]).forEach(function(c){ (c.callHistory||[]).forEach(function(h){ var k=mkey(h.date); if(k) data[k].call++; }); });
+    (salesCallArchive||[]).forEach(function(s3){ (s3.calls||[]).forEach(function(c){ var k=mkey(c.date); if(k) data[k].call++; }); });
+    /* 導入前の架電（BASE_CALLS）は6月に計上（管理者のみ） */
+    if(admin && typeof BASE_CALLS!=='undefined' && data['2026-06']) data['2026-06'].call += BASE_CALLS;
     (pipeline||[]).forEach(function(p){
       var mk=((p.meetingDate||p.createdAt||'')+'').slice(0,7);
       if(data[mk] && (p.stage==='talking'||p.stage==='contract'||p.stage==='lost')) data[mk].appt++;
@@ -9841,10 +9846,10 @@ function _normArea(a){ return (['愛知','三重','岐阜','静岡'].indexOf(a)!
 function fbMigrateMine(){
   if(!isAdminUser()||!window._db){ toast('管理者のみ実行できます','err'); return; }
   if(!confirm('あなたのクラウド記録を、今の実績（架電・アポ・商談・契約の総数）に合わせてリセットします。\n※あなたの記録を入れ直し、余分な重複やテスト分は消えます。実行しますか？')) return;
-  var u=window.FB.user, d0='2020-01-01';
+  var u=window.FB.user, d0='2026-06-15';
   function buildDocs(){
     var docs=[];
-    for(var i=0;i<BASE_CALLS;i++) docs.push({type:'call',area:'愛知',day:d0,company:'(導入前)'});
+    for(var i=0;i<BASE_CALLS;i++) docs.push({type:'call',area:'愛知',day:'2026-06-15',company:'(導入前)'});
     (callList||[]).forEach(function(c){ var ar='愛知'; (c.callHistory||[]).forEach(function(h){ docs.push({type:'call',area:ar,day:((h.date||d0)+'').slice(0,10),company:c.company||''}); }); });
     (salesList||[]).forEach(function(s){ var ar='愛知'; (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:s.name||''}); }); });
     (salesCallArchive||[]).forEach(function(s){ var ar='愛知'; (s.calls||[]).forEach(function(cc){ docs.push({type:'call',area:ar,day:(cc.date||d0),company:''}); }); });
