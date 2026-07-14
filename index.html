@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ファネル改訂版54</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 全員ファネル版55</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -7724,20 +7724,24 @@ function _renderPipelineV2Impl() {
 function renderPipeFunnel(pl){
   var el=document.getElementById('pipe2-analysis'); if(!el) return;
   var active=(pl||[]).filter(function(p){return p&&p.stage;});
-  /* 架電数：ダッシュボードと同じ集計（管理者は全員合算） */
+  var admin=isAdminUser();
+  /* ── 架電数 ── */
   var calls=0;
   try{
-    var base=(typeof BASE_CALLS!=='undefined' && isAdminUser())?BASE_CALLS:0;
+    var base=(typeof BASE_CALLS!=='undefined' && admin)?BASE_CALLS:0;
     var fromSales=(salesList||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
     var fromArch=(salesCallArchive||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
     var fromCalls=(callList||[]).reduce(function(s,x){ return s+((x.callHistory||[]).length); },0);
     calls=base+fromSales+fromArch+fromCalls;
-    if(isAdminUser() && window._kpiDelta) calls += (window._kpiDelta.calls||0);
+    if(admin && window._kpiDelta) calls += (window._kpiDelta.calls||0);   /* 他メンバー分 */
   }catch(e){ calls=0; }
-  /* アポ・商談：アポ以降に進んだ全カード（契約含む） */
-  /* アポ・商談＝商談した全企業（進行中＋契約＋NG） */
+  /* ── アポ・商談／契約：管理者は自分のカード＋他メンバーのクラウド分 ── */
   var appts=active.filter(function(p){return p.stage==='talking'||p.stage==='contract'||p.stage==='lost';}).length;
   var cons =active.filter(function(p){return p.stage==='contract';}).length;
+  if(admin && window._kpiDelta && !window._showAllDeals){
+    appts += (window._kpiDelta.appt||0);
+    cons  += (window._kpiDelta.contract||0);
+  }
   var maxc=Math.max(calls,appts,cons,1);
   function fbar(lbl,cnt,color,rate){
     var w=Math.round(cnt/maxc*100);
@@ -7750,7 +7754,8 @@ function renderPipeFunnel(pl){
   var funnel=fbar('📞 架電',calls,'#3d6fa8','')
     +fbar('🤝 アポ・商談',appts,'#3f89c8', calls?('アポ率 '+Math.round(appts/calls*100)+'%'):'')
     +fbar('🎉 新規契約',cons,'#4aa9bc', appts?('成約率 '+Math.round(cons/appts*100)+'%'):'');
-  var deals=active.filter(function(p){return p.stage==='appt'||p.stage==='talking';});
+  var scope = admin ? '<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:6px">全員合算</span>' : '';
+  var deals=active.filter(function(p){return p.stage==='talking';});
   var hi=deals.filter(function(p){return (parseInt(p.probability)||0)>=80;}).length;
   var mid=deals.filter(function(p){var n=parseInt(p.probability)||0;return n>=50&&n<80;}).length;
   var lo=deals.filter(function(p){return (parseInt(p.probability)||0)<50;}).length;
@@ -7758,7 +7763,7 @@ function renderPipeFunnel(pl){
   var summary='<div style="display:flex;gap:8px">'
     +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>';
   el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル</div>'+funnel+'</div>'
+    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル'+scope+'</div>'+funnel+'</div>'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🎯 確度サマリー（進行中の商談）</div>'+summary+'</div></div>';
 }
 function renderPipeGantt(pl){
