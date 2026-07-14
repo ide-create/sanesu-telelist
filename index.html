@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版59</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版60</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -7706,9 +7706,16 @@ function _renderPipelineV2Impl() {
 function renderMonthlyTrend(targetId){
   var el=document.getElementById(targetId||'db-trend'); if(!el) return;
   var admin=isAdminUser();
+  /* 2026年6月〜現在まで */
+  var START_Y=2026, START_M=6;
   var now=new Date(), months=[];
-  for(var i=5;i>=0;i--){ var d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'月'}); }
-  var data={}; months.forEach(function(m){ data[m.key]={call:0,appt:0,contract:0}; });
+  var y=START_Y, m=START_M;
+  while (y < now.getFullYear() || (y===now.getFullYear() && m <= now.getMonth()+1)) {
+    months.push({key:y+'-'+String(m).padStart(2,'0'), label:m+'月'});
+    m++; if(m>12){ m=1; y++; }
+    if(months.length>18) break;
+  }
+  var data={}; months.forEach(function(mm){ data[mm.key]={call:0,appt:0}; });
   /* 自分のローカル記録 */
   try{
     (salesList||[]).forEach(function(s2){ (s2.calls||[]).forEach(function(c){ var k=((c.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
@@ -7716,43 +7723,40 @@ function renderMonthlyTrend(targetId){
     (pipeline||[]).forEach(function(p){
       var mk=((p.meetingDate||p.createdAt||'')+'').slice(0,7);
       if(data[mk] && (p.stage==='talking'||p.stage==='contract'||p.stage==='lost')) data[mk].appt++;
-      var ck=((p.contractDate||'')+'').slice(0,7);
-      if(data[ck] && p.stage==='contract') data[ck].contract++;
     });
   }catch(e){}
-  /* 管理者：他メンバーのクラウド記録を合算 */
+  /* 管理者：他メンバーのクラウド記録 */
   if(admin && window._allActivity){
     window._allActivity.forEach(function(e){
-      if((e.email||'')===window.ADMIN_EMAIL) return;   /* 自分はローカルで計上済み */
+      if((e.email||'')===window.ADMIN_EMAIL) return;
       var k=((e.day||'')+'').slice(0,7);
       if(!data[k]) return;
       if(e.type==='call') data[k].call++;
       else if(e.type==='appt') data[k].appt++;
-      else if(e.type==='contract') data[k].contract++;
     });
   }
   var maxV=1;
-  months.forEach(function(m){ var d=data[m.key]; maxV=Math.max(maxV,d.call,d.appt,d.contract); });
-  var bars=months.map(function(m){
-    var d=data[m.key];
-    function bar(v,col){
+  months.forEach(function(mm){ var d=data[mm.key]; maxV=Math.max(maxV,d.call,d.appt); });
+  var bars=months.map(function(mm){
+    var d=data[mm.key];
+    function bar(v,col,lbl){
       var h=Math.round(v/maxV*100);
-      return '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">'
-        +(v>0?'<span style="font-size:.58rem;color:'+col+';font-weight:700;margin-bottom:2px">'+v+'</span>':'')
-        +'<div style="width:100%;max-width:16px;height:'+Math.max(2,h)+'%;background:linear-gradient(180deg,'+col+',' +col+'88);border-radius:3px 3px 0 0"></div></div>';
+      return '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%" title="'+lbl+' '+v+'件">'
+        +'<span style="font-size:.66rem;color:'+col+';font-weight:800;margin-bottom:3px">'+v+'</span>'
+        +'<div style="width:100%;max-width:26px;height:'+Math.max(2,h)+'%;background:linear-gradient(180deg,'+col+',' +col+'88);border-radius:4px 4px 0 0"></div></div>';
     }
-    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0">'
-      +'<div style="display:flex;gap:3px;align-items:flex-end;height:120px;width:100%;justify-content:center">'
-        +bar(d.call,'#3d6fa8')+bar(d.appt,'#5ea888')+bar(d.contract,'#c9b25e')
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0">'
+      +'<div style="display:flex;gap:6px;align-items:flex-end;height:140px;width:100%;justify-content:center">'
+        +bar(d.call,'#3d6fa8','架電')+bar(d.appt,'#5ea888','アポ・商談')
       +'</div>'
-      +'<div style="font-size:.62rem;color:rgba(255,255,255,.45)">'+m.label+'</div></div>';
+      +'<div style="font-size:.7rem;color:rgba(255,255,255,.5);font-weight:600">'+mm.label+'</div></div>';
   }).join('');
-  var legend='<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:.66rem">'
-    +'<span style="color:#3d6fa8">■ 架電</span><span style="color:#5ea888">■ アポ・商談</span><span style="color:#c9b25e">■ 新規契約</span></div>';
+  var legend='<div style="display:flex;gap:18px;justify-content:center;margin-top:12px;font-size:.7rem">'
+    +'<span style="color:#3d6fa8">■ 架電</span><span style="color:#5ea888">■ アポ・商談</span></div>';
   el.innerHTML='<div class="glass" style="padding:18px 20px;height:100%"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📈 月別推移'
     +(admin?'<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:8px">全員合算</span>':'')+'</div>'
-    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:12px">直近6か月</div>'
-    +'<div style="display:flex;gap:8px;align-items:flex-end">'+bars+'</div>'+legend+'</div>';
+    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:14px">2026年6月〜（アプリで記録した分）</div>'
+    +'<div style="display:flex;gap:10px;align-items:flex-end">'+bars+'</div>'+legend+'</div>';
 }
 
 function renderStallAlert(pl, targetId){
