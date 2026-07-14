@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 全幅版62</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 一括取込版64</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -2298,6 +2298,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-cyan btn-sm" onclick="openSearchModal()">🔍 企業を検索して追加</button>
+          <button class="btn btn-sm" onclick="openImportModal()" style="border:1px solid rgba(94,168,136,.5);color:#9fe0c0">📥 一括取り込み</button>
           <select id="sl-area" onchange="renderSalesList()" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.78rem"></select>
           <input id="sl-search" oninput="renderSalesList()" placeholder="🔍 企業名・住所で絞り込み" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.78rem;min-width:180px">
           <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border)" onclick="exportSalesCsv()">↓ CSV出力</button>
@@ -3154,6 +3155,44 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
     <div class="m-foot">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-sales-appt')">キャンセル</button>
       <button class="btn btn-cyan btn-sm" onclick="confirmSalesAppt()">アポ登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 企業一括取り込み -->
+<div class="overlay" id="ov-import">
+  <div class="modal" style="max-width:640px">
+    <div class="m-head">
+      <h3>📥 企業を一括取り込み</h3>
+      <button class="xbtn" onclick="closeModal('ov-import')">✕</button>
+    </div>
+    <div class="m-body">
+      <div style="background:rgba(94,168,136,.08);border:1px solid rgba(94,168,136,.28);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:.76rem;color:#9fe0c0;font-weight:700;margin-bottom:8px">🔗 企業リストを探す（クリックで開く）</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://itp.ne.jp/genre/?areacode=23&genre=1301" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none;border:1px solid rgba(90,160,224,.5);color:#9fd0f5">📞 iタウンページ（製造業）</a>
+          <a href="https://www.hellowork.mhlw.go.jp/kensaku/GECA110010.do?action=initDisp&screenId=GECA110010" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none;border:1px solid rgba(201,178,94,.5);color:#e8d89a">🏢 ハローワーク求人検索</a>
+          <a href="https://baseconnect.in/companies/prefecture/60622468-79bd-4eef-86f8-cb69d1ef09f0" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none;border:1px solid rgba(160,160,200,.4);color:#c8cbe0">📋 Baseconnect（愛知）</a>
+        </div>
+        <div style="font-size:.66rem;color:var(--text-muted);margin-top:8px;line-height:1.6">サイトで企業を探し、企業名・電話番号・住所をコピーして下に貼り付けてください。</div>
+      </div>
+
+      <div class="field">
+        <label>[ ① テキストを貼り付け ]</label>
+        <div style="font-size:.66rem;color:var(--text-muted);margin-bottom:6px">1行に1社。「企業名,電話番号,住所」の順（カンマ・タブ区切り、どちらでもOK）</div>
+        <textarea id="imp-text" rows="8" oninput="previewImport()" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-family:var(--mono);font-size:.78rem;resize:vertical" placeholder="株式会社〇〇製作所,0565-12-3456,愛知県豊田市〇〇町1-2&#10;△△工業,0566-98-7654,愛知県刈谷市△△"></textarea>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label>[ ② またはCSVファイルを選択 ]</label>
+        <input type="file" id="imp-file" accept=".csv,.txt" onchange="importFromFile(event)" style="width:100%;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:.78rem">
+      </div>
+
+      <div id="imp-preview" style="margin-top:12px"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-import')">キャンセル</button>
+      <button class="btn btn-cyan btn-sm" onclick="runImport()">📥 営業リストに追加</button>
     </div>
   </div>
 </div>
@@ -4492,6 +4531,72 @@ function updateBadges() {
 
 /* ═══════════════════════════════════════ 営業リスト（架電を積み重ねる台帳） */
 /* 検索した企業を営業リストに自動追加（電話番号か企業名で重複判定） */
+/* ═══ 企業の一括取り込み（貼り付け / CSV） ═══ */
+function openImportModal(){
+  var t=document.getElementById('imp-text'); if(t) t.value='';
+  var f=document.getElementById('imp-file'); if(f) f.value='';
+  var p=document.getElementById('imp-preview'); if(p) p.innerHTML='';
+  openModal('ov-import');
+}
+function importFromFile(ev){
+  var file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var txt = e.target.result || '';
+    var ta = document.getElementById('imp-text');
+    if(ta) ta.value = txt;
+    previewImport();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function parseImportText(txt){
+  var lines = (txt||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var out=[];
+  lines.forEach(function(line, idx){
+    /* ヘッダー行はスキップ */
+    if(idx===0 && /企業名|会社名|名称/.test(line) && /電話|TEL/i.test(line)) return;
+    var cols = line.split(/[\t,、]/).map(function(c){ return c.trim().replace(/^["']|["']$/g,''); });
+    var name = cols[0]||'';
+    if(!name) return;
+    /* 電話番号らしきものを自動検出 */
+    var phone='', address='';
+    for(var i=1;i<cols.length;i++){
+      var c=cols[i]||'';
+      if(!phone && /^[0-9\-()\s]{9,}$/.test(c)) { phone=c; continue; }
+      if(c) address += (address?' ':'') + c;
+    }
+    out.push({name:name, phone:phone, address:address});
+  });
+  return out;
+}
+function previewImport(){
+  var txt=(document.getElementById('imp-text')||{}).value||'';
+  var rows=parseImportText(txt);
+  var el=document.getElementById('imp-preview'); if(!el) return;
+  if(!rows.length){ el.innerHTML=''; return; }
+  var head='<div style="font-size:.72rem;color:#9fe0c0;font-weight:700;margin-bottom:6px">読み取り結果：'+rows.length+'社</div>';
+  var list=rows.slice(0,5).map(function(r){
+    return '<div style="font-size:.72rem;color:var(--text-sub);padding:3px 0">'+esc(r.name)+' ／ '+esc(r.phone||'電話なし')+' ／ '+esc(r.address||'住所なし')+'</div>';
+  }).join('');
+  var more = rows.length>5 ? '<div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">…他'+(rows.length-5)+'社</div>' : '';
+  el.innerHTML='<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px">'+head+list+more+'</div>';
+}
+function runImport(){
+  var txt=(document.getElementById('imp-text')||{}).value||'';
+  var rows=parseImportText(txt);
+  if(!rows.length){ toast('取り込む企業がありません。テキストを貼り付けてください','err'); return; }
+  var leads=rows.map(function(r){
+    var area='';
+    try{ area = companyArea({address:r.address, name:r.name}) || ''; }catch(e){}
+    return { name:r.name, phone:r.phone, address:r.address, url:'', tagArea:area };
+  });
+  var added = addLeadsToSalesList(leads);
+  save(); renderSalesList(); updateKPIs(); updateBadges(); renderDashboard3Col();
+  closeModal('ov-import');
+  toast(rows.length+'社を読み取り → '+added+'社を営業リストに追加（重複'+(rows.length-added)+'社は除外）','ok');
+}
+
 function addLeadsToSalesList(leads) {
   if (!Array.isArray(leads) || !leads.length) return 0;
   const normTel = s => (s||'').replace(/[-\s()]/g,'');
@@ -4981,24 +5086,39 @@ const MFGR_KEYWORDS_DEFAULT = [
 ];
 const IND_KEYWORDS = {
   auto: [
-    '自動車部品製造工場','プレス加工工場','鍛造工場',
-    '溶接工場','金型工場','機械部品製造工場',
-    '樹脂成形工場','板金加工工場','切削加工工場','自動車工場'
+    '自動車部品製造工場','プレス加工工場','鍛造工場','溶接工場','金型工場',
+    '機械部品製造工場','樹脂成形工場','板金加工工場','切削加工工場','自動車工場',
+    '製作所','工業株式会社','製造業','部品メーカー','金属加工業','表面処理工場',
+    'メッキ工場','熱処理工場','ダイカスト','鋳物工場','旋盤加工','NC加工',
+    'マシニング加工','治具製作','자動車部品','産業機械製造','油圧機器製造',
+    'ばね製造','ねじ製造','軸受製造','歯車製造','シート製造','内装部品製造',
+    '排気系部品','ブレーキ部品','エンジン部品','トランスミッション部品',
+    '電装品製造','ハーネス製造','ゴム部品製造','パッキン製造','塗装工場'
   ],
   food: [
-    '食品製造工場','食品加工工場','惣菜製造工場',
-    '弁当製造工場','冷凍食品工場','飲料製造工場',
-    '菓子製造工場','食品工場'
+    '食品製造工場','食品加工工場','惣菜製造工場','弁当製造工場','冷凍食品工場',
+    '飲料製造工場','菓子製造工場','食品工場','製麺工場','パン工場','製パン',
+    '乳製品工場','水産加工','精肉加工','漬物製造','味噌醤油製造','調味料製造',
+    '製菓工場','冷凍惣菜','給食センター','食品包装','農産加工'
   ],
   logi: [
-    '物流倉庫','配送センター','物流センター',
-    '倉庫業','物流拠点','自動倉庫','冷凍倉庫','物流施設'
+    '物流倉庫','配送センター','物流センター','倉庫業','物流拠点','自動倉庫',
+    '冷凍倉庫','物流施設','運送会社','트럭運送','倉庫会社','保管倉庫',
+    '3PL','流通センター','デポ','集配センター','仕分けセンター','通関業'
   ],
   elec: [
-    '電子部品製造工場','電装部品工場','基板製造工場',
-    '半導体工場','電子機器製造工場','電子部品工場'
+    '電子部品製造工場','電装部品工場','基板製造工場','半導体工場','電子機器製造工場',
+    '電子部品工場','プリント基板','実装工場','コネクタ製造','センサー製造',
+    'モーター製造','電池製造','電線製造','制御機器製造','計測機器製造',
+    'LED製造','光学部品','精密機器製造','医療機器製造'
   ]
 };
+/* 配列をシャッフル（毎回違う順で検索し、新しい企業を掘る） */
+function _shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
 
 /* ═══════════════════════════════════════ SEARCH */
 const SEARCH_MAX = 100;
@@ -5283,7 +5403,7 @@ function placesTextSearch(service, query, coord, radiusM, maxPages) {
 
 async function searchGoogle(area, ind) {
   const coord    = AREA_COORDS[area];
-  const keywords = IND_KEYWORDS[ind];
+  const keywords = _shuffle(IND_KEYWORDS[ind] || []);
   setProgress(10, 'Google Maps API 読み込み中...');
   await loadGoogleMaps();
 
@@ -5413,11 +5533,11 @@ let srchArea = null;
 let srchCities = [];  /* 検索対象に選んだ市（空＝全市） */
 let srchGenre = 'all';  /* 選択中の業種 */
 const SRCH_GENRES = [
-  { id:'all',      name:'製造業', kws:['製造業','工場','製作所','工業'] },
-  { id:'auto',     name:'自動車', kws:['自動車部品','車載部品','部品製造','自動車'] },
-  { id:'food',     name:'食品',   kws:['食品工場','食品加工','製パン','製菓'] },
-  { id:'elec',     name:'電子',   kws:['電子部品','半導体','基板','電子機器'] },
-  { id:'butsuryu', name:'物流',   kws:['物流','倉庫','配送センター','運送'] },
+  { id:'all',      name:'製造業', kws:['製造業','工場','製作所','工業','金属加工','機械加工','部品メーカー','産業機械','精密加工','鉄工所','工業株式会社','製造','加工業','ものづくり企業'] },
+  { id:'auto',     name:'自動車', kws:['自動車部品','車載部品','部品製造','自動車','プレス加工','鍛造','鋳造','溶接','金型','板金','樹脂成形','切削加工','メッキ','熱処理','ダイカスト','ばね製造','ねじ製造','軸受','歯車','ハーネス','電装部品','ゴム部品','塗装工場','排気部品','エンジン部品'] },
+  { id:'food',     name:'食品',   kws:['食品工場','食品加工','製パン','製菓','惣菜製造','弁当製造','冷凍食品','飲料製造','製麺','乳製品','水産加工','精肉加工','漬物製造','調味料製造','給食センター','食品包装'] },
+  { id:'elec',     name:'電子',   kws:['電子部品','半導体','基板','電子機器','プリント基板','実装','コネクタ','センサー','モーター','電池','電線','制御機器','計測機器','LED','光学部品','精密機器','医療機器'] },
+  { id:'butsuryu', name:'物流',   kws:['物流','倉庫','配送センター','運送','物流センター','冷凍倉庫','保管倉庫','流通センター','仕分けセンター','運送会社','3PL','集配センター'] },
 ];
 let srchKeywords = [];
 let srchCount = 100;
@@ -5716,7 +5836,7 @@ async function startAreaSearch() {
   const area     = srchArea;
   /* 選択された市だけ検索（未選択なら全市） */
   const cities   = (srchCities && srchCities.length) ? srchCities.slice() : area.cities;
-  const keywords = srchKeywords;
+  const keywords = _shuffle(srchKeywords);
   const maxCount = srchCount;
 
   /* 前回使用エリアを保存 */
