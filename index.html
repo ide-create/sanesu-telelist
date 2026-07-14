@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談共有版㊹</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談共有版㊺</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -9800,10 +9800,15 @@ function findDeal(id){
 
 function renderDealToggle(){
   var el=document.getElementById('pipe2-admin-tools'); if(!el) return;
-  if(!isAdminUser()){ el.innerHTML=''; return; }
-  var on = !!window._showAllDeals;
-  el.innerHTML = '<button class="pipe2-add-manual" onclick="toggleAllDeals()" style="margin-left:8px;'+(on?'background:rgba(94,168,136,.22);border-color:rgba(94,168,136,.7);color:#9fe0c0':'')+'">\ud83d\udc65 '+(on?'全員の商談：ON':'全員の商談を表示')+'</button>'
-    + '<button class="pipe2-add-manual" onclick="fbUploadAllDeals()" style="margin-left:6px;border-color:rgba(212,175,55,.5);color:#f0d98c">\u2b06 既存カードを一括反映</button>';
+  var logged = !!(window.FB && window.FB.user);
+  if(!logged){ el.innerHTML=''; return; }
+  var h='';
+  if(isAdminUser()){
+    var on = !!window._showAllDeals;
+    h += '<button class="pipe2-add-manual" onclick="toggleAllDeals()" style="margin-left:8px;'+(on?'background:rgba(94,168,136,.22);border-color:rgba(94,168,136,.7);color:#9fe0c0':'')+'">\ud83d\udc65 '+(on?'全員の商談：ON':'全員の商談を表示')+'</button>';
+  }
+  h += '<button class="pipe2-add-manual" onclick="fbUploadAllDeals()" style="margin-left:6px;border-color:rgba(212,175,55,.5);color:#f0d98c" title="このPCの商談カードをクラウドに保存します">\u2b06 商談をクラウドに反映</button>';
+  el.innerHTML = h;
 }
 function renderAdminAgg(){
   var el=document.getElementById('admin-agg');
