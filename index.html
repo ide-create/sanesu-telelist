@@ -1980,6 +1980,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
         type: type,
         area: area,
         company: (extra && extra.company) || '',
+        route: (extra && extra.route) || '',
         amount: (extra && extra.amount != null) ? extra.amount : null,
         day: (typeof getTodayStr === 'function') ? getTodayStr() : '',
         ts: firebase.firestore.FieldValue.serverTimestamp()
@@ -2193,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 分析ガント版㊷</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 経路追加版㊸</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -2633,6 +2634,15 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
         <div class="field">
           <label>[ 電話番号 ]</label>
           <input type="tel" id="pm-phone" placeholder="0565-XX-XXXX">
+        </div>
+        <div class="field">
+          <label>[ 経路 ]</label>
+          <select id="pm-route">
+            <option value="tel">📞 テレアポ</option>
+            <option value="visit">🚪 飛び込み</option>
+            <option value="intro">🤝 紹介</option>
+            <option value="other">✉️ その他</option>
+          </select>
         </div>
         <div class="field">
           <label>[ ステージ ]</label>
@@ -3152,6 +3162,14 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
       <div class="co-box"><strong id="sa-company">—</strong></div>
       <div class="field"><label>[ 人事担当者名 ]</label><input type="text" id="sa-contact" placeholder="例：採用ご担当 山田様"></div>
       <div class="field"><label>[ アポイント日 ]</label><input type="datetime-local" id="sa-meeting" style="color-scheme:dark"></div>
+      <div class="field"><label>[ 経路（アポ取得のきっかけ） ]</label>
+        <select id="sa-route">
+          <option value="tel">📞 テレアポ</option>
+          <option value="visit">🚪 飛び込み</option>
+          <option value="intro">🤝 紹介</option>
+          <option value="other">✉️ その他</option>
+        </select>
+      </div>
     </div>
     <div class="m-foot">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-sales-appt')">キャンセル</button>
@@ -4553,6 +4571,9 @@ function setSalesOutcome(id, outcome){
 }
 
 /* 架電済みをワンタップ記録（＝架電1件） */
+var ROUTES = { tel:{label:'テレアポ',icon:'📞',color:'#5aa0e0'}, visit:{label:'飛び込み',icon:'🚪',color:'#c9a45e'}, intro:{label:'紹介',icon:'🤝',color:'#5ea888'}, other:{label:'その他',icon:'✉️',color:'#9aa4b2'} };
+function routeLabel(r){ var o=ROUTES[r]||ROUTES.tel; return o.icon+' '+o.label; }
+function routeColor(r){ return (ROUTES[r]||ROUTES.tel).color; }
 function salesMarkCalled(id){
   const s = salesList.find(x => x.id === id);
   if (!s) return;
@@ -4755,10 +4776,11 @@ function confirmSalesAppt() {
   /* 商談へ登録（担当者名つき）→ 商談日時をセット */
   syncPipeline(s.name, s.phone, 'appointment', contact);
   const p = pipeline.find(x => x.company === s.name);
-  if (p) p.meetingDate = meeting;
+  const route = document.getElementById('sa-route')?.value || 'tel';
+  if (p) { p.meetingDate = meeting; p.route = route; }
   save();
   renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges(); renderPipeline(); renderSchedule();
-  try{ if(window.fbLog){ fbLog('call',{area:companyArea(s), company:s.name}); fbLog('appt',{area:companyArea(s), company:s.name}); } }catch(e){}
+  try{ if(window.fbLog){ fbLog('call',{area:companyArea(s), company:s.name}); fbLog('appt',{area:companyArea(s), company:s.name, route:route}); } }catch(e){}
   closeModal('ov-sales-appt');
 }
 /* 削除する企業の架電記録をアーカイブへ退避（削除しても架電数を減らさない） */
@@ -6774,7 +6796,7 @@ function saveResult() {
     c.dealHistory.push({ date:resDate.slice(0,10), time:resDate.slice(11,16)||'', type:'訪問',
       participants:resContact, content:memo, nextAction:'契約管理へ' });
     c.stage = 'contract';
-    try{ if(window.fbLog) fbLog('contract',{area:companyArea(c), company:c.company, amount:(tanka||0)}); }catch(e){}
+    try{ if(window.fbLog) fbLog('contract',{area:companyArea(c), company:c.company, amount:(tanka||0), route:(c.route||'')}); }catch(e){}
     c.contractDate  = today;
     c.contractStart = startDate;
     c.unitPrice   = tanka ? String(tanka) : (c.unitPrice||'');
@@ -7805,6 +7827,7 @@ function buildP2Card(c, stage) {
   const amtHtml = amtN ? `<div class="p2-card-amount">💰 ${fmtAmt(amtN)}円</div>` : '';
   const dtHtml  = c.meetingDate ? `<div class="p2-card-row">📅 ${fmtDt(c.meetingDate)}</div>` : '';
   const nextHtml = buildNextActionHtml(c);
+  const routeHtml = c.route ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;border:1px solid ${routeColor(c.route)}55;color:${routeColor(c.route)};margin-top:4px">${routeLabel(c.route)}</span>` : '';
 
   /* 契約済は結果入力ボタン非表示 */
   const resultBtn = c.stage !== 'contract'
@@ -7817,7 +7840,7 @@ function buildP2Card(c, stage) {
       onclick="openPipeDetailV2('${c.id}')">
     <div class="p2-card-company">${esc(company)}</div>
     ${c.contact && c.contact !== 'undefined' ? `<div class="p2-card-contact">👤 ${esc(c.contact)}</div>` : ''}
-    ${amtHtml}${dtHtml}${dealInfo}${nextHtml}
+    ${amtHtml}${dtHtml}${dealInfo}${routeHtml}${nextHtml}
     <div class="p2-card-foot">
       ${probBadge(prob)}
       <span class="p2-card-date">${fmtDate(c.createdAt)}</span>
@@ -8408,6 +8431,7 @@ function openPipeModal(id) {
   document.getElementById('pm-contact').value     = card ? (card.contact||'') : '';
   document.getElementById('pm-phone').value       = card ? (card.phone||'') : '';
   document.getElementById('pm-stage').value       = card ? card.stage : 'appt';
+  { var _r=document.getElementById('pm-route'); if(_r) _r.value = card ? (card.route||'tel') : 'visit'; }
   document.getElementById('pm-meetingdate').value = card ? (card.meetingDate||'') : '';
   document.getElementById('pm-memo').value        = card ? (card.memo||'') : '';
   // contract fields
@@ -8442,6 +8466,7 @@ function savePipeModal() {
       card.contact     = document.getElementById('pm-contact').value.trim();
       card.phone       = document.getElementById('pm-phone').value.trim();
       card.stage       = document.getElementById('pm-stage').value;
+      card.route       = document.getElementById('pm-route')?.value || card.route || 'tel';
       card.meetingDate = document.getElementById('pm-meetingdate').value;
       card.memo        = document.getElementById('pm-memo').value.trim();
       Object.assign(card, contractData);
@@ -8453,6 +8478,7 @@ function savePipeModal() {
       contact:     document.getElementById('pm-contact').value.trim(),
       phone:       document.getElementById('pm-phone').value.trim(),
       stage:       document.getElementById('pm-stage').value,
+      route:       document.getElementById('pm-route')?.value || 'visit',
       meetingDate: document.getElementById('pm-meetingdate').value,
       memo:        document.getElementById('pm-memo').value.trim(),
       createdAt:   new Date().toISOString(),
@@ -9598,10 +9624,27 @@ function buildAdminAggHtml(events){
       +'<td style="padding:7px 8px;color:#f0d98c">'+(e.area||'')+'</td></tr>';
   });
   if(!crows) crows='<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-size:.78rem">まだ新規契約の記録はありません</td></tr>';
+  /* 経路別（件数のみ・率は出さない） */
+  var ROUTE_DEF=[['tel','📞 テレアポ'],['visit','🚪 飛び込み'],['intro','🤝 紹介'],['other','✉️ その他']];
+  var rtRows='';
+  ROUTE_DEF.forEach(function(rd){
+    var key=rd[0];
+    var ap=events.filter(function(e){ return e.type==='appt' && (e.route||'tel')===key; }).length;
+    var ct=events.filter(function(e){ return e.type==='contract' && (e.route||'')===key; }).length;
+    rtRows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+rd[1]+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono);font-weight:700;color:#5fd6a8">'+ap+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono);font-weight:700;color:#f0d98c">'+ct+'</td></tr>';
+  });
+  var routeTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:4px;font-size:.9rem">🛤 経路別（アポ取得のきっかけ）</div>'
+    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">飛び込み・紹介は母数が取れないため、件数のみ表示（率は架電→アポで算出）</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr style="border-bottom:1px solid rgba(120,160,220,.2)">'
+    +'<th style="text-align:left;padding:6px 8px;font-size:.68rem;color:var(--text-muted);font-weight:600">経路</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#5fd6a8">アポ取得</th>'
+    +'<th style="padding:6px 4px;font-size:.66rem;color:#f0d98c">新規契約</th></tr>'+rtRows+'</table></div>';
   var conTbl='<div class="glass" style="padding:16px"><div style="font-weight:700;color:#f0d98c;margin-bottom:8px;font-size:.9rem">\ud83c\udfc6 \u65b0\u898f\u5951\u7d04 \u4f01\u696d\u4e00\u89a7</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr style="border-bottom:1px solid rgba(120,160,220,.2)"><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u5951\u7d04\u65e5</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u4f01\u696d\u540d</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u62c5\u5f53</th><th style="text-align:left;padding:6px 8px;font-size:.66rem;color:var(--text-muted)">\u30a8\u30ea\u30a2</th></tr>'+crows+'</table></div>';
   var head='<div class="glass" style="padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0;font-size:1.1rem;color:#8fc0f0">\ud83d\udcca \u5168\u54e1\u96c6\u8a08</h2><div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">\u30af\u30e9\u30a6\u30c9\u8a18\u9332\u306e\u5168\u30e1\u30f3\u30d0\u30fc\u5408\u8a08</div></div><button class="btn btn-sm" onclick="fbMigrateMine()" style="border:1px solid rgba(212,175,55,.5);color:#f0d98c;font-size:.7rem;padding:6px 12px;margin-right:6px">⬆ 過去データを反映</button><button class="btn btn-sm" onclick="renderAdminAgg()" style="border:1px solid rgba(120,160,220,.4);color:#8fc0f0;font-size:.7rem;padding:6px 14px">\u21bb \u66f4\u65b0</button></div>';
-  return head+cards+memberTbl+areaTbl+conTbl;
+  return head+cards+memberTbl+areaTbl+routeTbl+conTbl;
 }
 function isAdminUser(){ return !!(window.FB && window.FB.user && window.FB.user.email===window.ADMIN_EMAIL); }
 window._kpiDelta = {calls:0,appt:0,nego:0,contract:0};
