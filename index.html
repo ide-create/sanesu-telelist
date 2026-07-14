@@ -1067,16 +1067,16 @@ tr.row-contracted td:first-child{opacity:.55}
 
 /* 3-カラムコンテナ（20% / 52% / 28%） */
 /* ─── KPI 横一列（7枚） ─── */
-.db-kpi-row{max-width:1800px;margin:0 auto;padding:14px 20px 0;display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.db-kpi-row{max-width:2200px;margin:0 auto;padding:14px 20px 0;display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
 .db-kpi-row .kpi-card{padding:12px 14px 10px!important;min-height:auto!important}
 .db-kpi-row .kpi-icon{font-size:1.15rem!important;margin-bottom:5px!important}
 .db-kpi-row .kpi-val{font-size:1.85rem!important;margin-bottom:3px!important}
 .db-kpi-row .kpi-lbl{font-size:.62rem!important;letter-spacing:.04em!important}
 .db-kpi-row .kpi-sub{font-size:.55rem!important;margin-top:2px!important}
 /* ─── 目標設定バー ─── */
-.db-goal-bar{max-width:1800px;margin:0 auto;padding:6px 20px 0;display:flex;justify-content:flex-end}
+.db-goal-bar{max-width:2200px;margin:0 auto;padding:6px 20px 0;display:flex;justify-content:flex-end}
 /* ─── 中段4列グリッド（進捗×3＋カレンダー） ─── */
-.db-main-grid{max-width:1800px;margin:0 auto;padding:8px 24px 0;display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+.db-main-grid{max-width:2200px;margin:0 auto;padding:8px 20px 0;display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:start}
 @media(max-width:1200px){.db-main-grid{grid-template-columns:1fr}}
 @media(max-width:768px){.db-kpi-row{grid-template-columns:repeat(2,1fr);padding:10px 14px 0}.db-main-grid{grid-template-columns:1fr;padding:8px 14px 0;gap:8px}}
 
@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版58</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ダッシュ分析版59</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -7706,14 +7706,12 @@ function _renderPipelineV2Impl() {
 function renderMonthlyTrend(targetId){
   var el=document.getElementById(targetId||'db-trend'); if(!el) return;
   var admin=isAdminUser();
-  /* 直近6か月 */
   var now=new Date(), months=[];
   for(var i=5;i>=0;i--){ var d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'月'}); }
-  var data={};
-  months.forEach(function(m){ data[m.key]={call:0,appt:0,contract:0}; });
-  /* ローカル（自分）の記録 */
+  var data={}; months.forEach(function(m){ data[m.key]={call:0,appt:0,contract:0}; });
+  /* 自分のローカル記録 */
   try{
-    (salesList||[]).forEach(function(s){ (s.calls||[]).forEach(function(c){ var k=(c.date||'').slice(0,7); if(data[k]) data[k].call++; }); });
+    (salesList||[]).forEach(function(s2){ (s2.calls||[]).forEach(function(c){ var k=((c.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
     (callList||[]).forEach(function(c){ (c.callHistory||[]).forEach(function(h){ var k=((h.date||'')+'').slice(0,7); if(data[k]) data[k].call++; }); });
     (pipeline||[]).forEach(function(p){
       var mk=((p.meetingDate||p.createdAt||'')+'').slice(0,7);
@@ -7722,10 +7720,10 @@ function renderMonthlyTrend(targetId){
       if(data[ck] && p.stage==='contract') data[ck].contract++;
     });
   }catch(e){}
-  /* 管理者：他メンバーのクラウド分を合算 */
+  /* 管理者：他メンバーのクラウド記録を合算 */
   if(admin && window._allActivity){
     window._allActivity.forEach(function(e){
-      if((e.email||'')===window.ADMIN_EMAIL) return;
+      if((e.email||'')===window.ADMIN_EMAIL) return;   /* 自分はローカルで計上済み */
       var k=((e.day||'')+'').slice(0,7);
       if(!data[k]) return;
       if(e.type==='call') data[k].call++;
@@ -7734,40 +7732,27 @@ function renderMonthlyTrend(targetId){
     });
   }
   var maxV=1;
-  months.forEach(function(m){ var d=data[m.key]; maxV=Math.max(maxV,d.call,d.appt*5,d.contract*10); });
-  var W=100, H=110;
-  function pts(key,scale){
-    return months.map(function(m,i){
-      var v=data[m.key][key]*(scale||1);
-      var x=(i/(months.length-1))*W;
-      var y=H-(v/maxV)*H;
-      return x.toFixed(1)+','+y.toFixed(1);
-    }).join(' ');
-  }
-  function dots(key,scale,col){
-    return months.map(function(m,i){
-      var v=data[m.key][key]*(scale||1);
-      var x=(i/(months.length-1))*W;
-      var y=H-(v/maxV)*H;
-      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.8" fill="'+col+'"/>';
-    }).join('');
-  }
-  var labels=months.map(function(m,i){
-    var x=(i/(months.length-1))*W;
-    return '<text x="'+x.toFixed(1)+'" y="'+(H+9)+'" font-size="5" fill="rgba(255,255,255,.4)" text-anchor="middle">'+m.label+'</text>';
+  months.forEach(function(m){ var d=data[m.key]; maxV=Math.max(maxV,d.call,d.appt,d.contract); });
+  var bars=months.map(function(m){
+    var d=data[m.key];
+    function bar(v,col){
+      var h=Math.round(v/maxV*100);
+      return '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">'
+        +(v>0?'<span style="font-size:.58rem;color:'+col+';font-weight:700;margin-bottom:2px">'+v+'</span>':'')
+        +'<div style="width:100%;max-width:16px;height:'+Math.max(2,h)+'%;background:linear-gradient(180deg,'+col+',' +col+'88);border-radius:3px 3px 0 0"></div></div>';
+    }
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0">'
+      +'<div style="display:flex;gap:3px;align-items:flex-end;height:120px;width:100%;justify-content:center">'
+        +bar(d.call,'#3d6fa8')+bar(d.appt,'#5ea888')+bar(d.contract,'#c9b25e')
+      +'</div>'
+      +'<div style="font-size:.62rem;color:rgba(255,255,255,.45)">'+m.label+'</div></div>';
   }).join('');
-  var cur=data[months[months.length-1].key];
-  var svg='<svg viewBox="0 -6 '+W+' '+(H+18)+'" style="width:100%;height:170px;overflow:visible">'
-    +'<polyline points="'+pts('call',1)+'" fill="none" stroke="#3d6fa8" stroke-width="1.6"/>'+dots('call',1,'#3d6fa8')
-    +'<polyline points="'+pts('appt',5)+'" fill="none" stroke="#5ea888" stroke-width="1.6"/>'+dots('appt',5,'#5ea888')
-    +'<polyline points="'+pts('contract',10)+'" fill="none" stroke="#c9b25e" stroke-width="1.6"/>'+dots('contract',10,'#c9b25e')
-    +labels+'</svg>';
-  var legend='<div style="display:flex;gap:14px;justify-content:center;margin-top:6px;font-size:.62rem">'
-    +'<span style="color:#3d6fa8">● 架電 '+cur.call+'</span>'
-    +'<span style="color:#5ea888">● アポ '+cur.appt+'</span>'
-    +'<span style="color:#c9b25e">● 契約 '+cur.contract+'</span></div>';
-  el.innerHTML='<div class="glass" style="padding:18px 20px;height:100%"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📈 月別推移</div>'
-    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">直近6か月（今月の数字を凡例に表示）</div>'+svg+legend+'</div>';
+  var legend='<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:.66rem">'
+    +'<span style="color:#3d6fa8">■ 架電</span><span style="color:#5ea888">■ アポ・商談</span><span style="color:#c9b25e">■ 新規契約</span></div>';
+  el.innerHTML='<div class="glass" style="padding:18px 20px;height:100%"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📈 月別推移'
+    +(admin?'<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:8px">全員合算</span>':'')+'</div>'
+    +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:12px">直近6か月</div>'
+    +'<div style="display:flex;gap:8px;align-items:flex-end">'+bars+'</div>'+legend+'</div>';
 }
 
 function renderStallAlert(pl, targetId){
@@ -7806,7 +7791,27 @@ function renderStallAlert(pl, targetId){
 /* ダッシュボードの分析エリアを描画 */
 function renderDashAnalytics(){
   try{
-    var pl = areaFilter(pipeView());
+    /* 管理者：全員の商談カード（クラウド）を対象。未取得なら取得して再描画 */
+    var pl;
+    if (isAdminUser()) {
+      if (window._allDeals) {
+        pl = window._allDeals;
+      } else {
+        pl = pipeline || [];
+        if (!window.__dashDealsLoading && window._db) {
+          window.__dashDealsLoading = true;
+          window._db.collection('deals').get().then(function(snap){
+            var arr=[]; snap.forEach(function(d){ arr.push(d.data()); });
+            window._allDeals = arr;
+            window.__dashDealsLoading = false;
+            renderDashAnalytics();
+          }).catch(function(e){ window.__dashDealsLoading=false; console.error(e); });
+        }
+      }
+    } else {
+      pl = pipeline || [];
+    }
+    pl = areaFilter(pl);
     renderStallAlert(pl, 'db-stall');
     renderPipeFunnel(pl, 'db-analysis');
     renderPipeGantt(pl, 'db-gantt');
@@ -7864,7 +7869,7 @@ function renderPipeFunnel(pl, targetId){
   function chip(lbl,val,color){ return '<div style="flex:1;text-align:center;padding:14px 6px;background:rgba(255,255,255,.03);border-radius:8px;border-top:2px solid '+color+'"><div style="font-size:1.6rem;font-weight:800;color:'+color+'">'+val+'</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:2px">'+lbl+'</div></div>'; }
   var summary='<div style="display:flex;gap:8px">'
     +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>';
-  el.innerHTML='<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px">'
+  el.innerHTML='<div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px">'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル'+scope+'</div>'+funnel+'</div>'
     +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🎯 確度サマリー（進行中の商談）</div>'+summary+'</div></div>';
 }
