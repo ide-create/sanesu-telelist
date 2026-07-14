@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 4列版52</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 ファネル改訂版53</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -3358,15 +3358,15 @@ function load() {
   if (!Array.isArray(pipeline)) pipeline = [];
 
   /* ── 商談データ一括修復 ── */
-  const VALID_STAGES = new Set(['appt','talking','contract','lost','hold']);
+  const VALID_STAGES = new Set(['talking','contract','lost']);
   /* 旧7ステージ → 新3ステージへ自動移行 */
   const STAGE_ALIAS = {
-    'apo':'appt', 'appointment':'appt', 'アポ取得':'appt',
-    'visit':'appt',                                     // 初回訪問予定 → アポ取得
-    'proposal':'talking', 'quote':'talking',            // 提案・見積 → 商談中
-    'negotiation':'talking', '商談中':'talking',        // 交渉 → 商談中
-    'won':'contract', '受注':'contract',                // 受注 → 契約
-    'pending':'hold', '保留':'hold', '一旦保留':'hold', // 保留
+    'apo':'talking', 'appointment':'talking', 'アポ取得':'talking', 'appt':'talking',
+    'visit':'talking',
+    'proposal':'talking', 'quote':'talking',
+    'negotiation':'talking', '商談中':'talking',
+    'won':'contract', '受注':'contract',
+    'pending':'lost', '保留':'lost', '一旦保留':'lost', 'hold':'lost',
   };
   const AMT_MAP = {
     '未定':'','〜100万':'500000','100-300万':'2000000','100〜300万':'2000000',
@@ -7582,13 +7582,16 @@ const STAGE_COLORS = {
 /* 旧「見込み企業」ステージは廃止 → 新規NGへ寄せる */
 function _migrateHoldStage(){
   var n=0;
-  (pipeline||[]).forEach(function(p){ if(p && p.stage==='hold'){ p.stage='lost'; n++; } });
+  (pipeline||[]).forEach(function(p){
+    if(!p) return;
+    if(p.stage==='hold'){ p.stage='lost'; n++; }
+    if(p.stage==='appt'){ p.stage='talking'; n++; }   /* アポ＝商談に統合 */
+  });
   if(n) { try{ save(); }catch(e){} }
 }
 const PIPE_STAGES = [
-  {id:'appt',    icon:'🆕', label:'アポイント取得', color:'rgba(66,153,225,.65)'},
-  {id:'talking', icon:'🤝', label:'商談',         color:'rgba(159,122,234,.65)'},
-  {id:'contract',icon:'🎉', label:'契約',         color:'rgba(0,255,136,.7)'},
+  {id:'talking', icon:'🤝', label:'アポ・商談',   color:'rgba(66,153,225,.65)'},
+  {id:'contract',icon:'🎉', label:'新規契約',     color:'rgba(0,255,136,.7)'},
   {id:'lost',    icon:'🚫', label:'新規NG',       color:'rgba(245,101,101,.6)'},
 ];
 
@@ -7721,32 +7724,41 @@ function _renderPipelineV2Impl() {
 function renderPipeFunnel(pl){
   var el=document.getElementById('pipe2-analysis'); if(!el) return;
   var active=(pl||[]).filter(function(p){return p&&p.stage;});
-  var appt=active.filter(function(p){return p.stage==='appt';}).length;
-  var talk=active.filter(function(p){return p.stage==='talking';}).length;
-  var con =active.filter(function(p){return p.stage==='contract';}).length;
-  var tot=appt+talk+con, maxc=Math.max(appt,talk,con,1);
+  /* 架電数：ダッシュボードと同じ集計（管理者は全員合算） */
+  var calls=0;
+  try{
+    var base=(typeof BASE_CALLS!=='undefined' && isAdminUser())?BASE_CALLS:0;
+    var fromSales=(salesList||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+    var fromArch=(salesCallArchive||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+    var fromCalls=(callList||[]).reduce(function(s,x){ return s+((x.callHistory||[]).length); },0);
+    calls=base+fromSales+fromArch+fromCalls;
+    if(isAdminUser() && window._kpiDelta) calls += (window._kpiDelta.calls||0);
+  }catch(e){ calls=0; }
+  /* アポ・商談：アポ以降に進んだ全カード（契約含む） */
+  var appts=active.filter(function(p){return p.stage==='appt'||p.stage==='talking'||p.stage==='contract';}).length;
+  var cons =active.filter(function(p){return p.stage==='contract';}).length;
+  var maxc=Math.max(calls,appts,cons,1);
   function fbar(lbl,cnt,color,rate){
     var w=Math.round(cnt/maxc*100);
     return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">'
-      +'<div style="width:82px;font-size:.78rem;color:#dce9fa;flex-shrink:0;font-weight:600">'+lbl+'</div>'
+      +'<div style="width:88px;font-size:.78rem;color:#dce9fa;flex-shrink:0;font-weight:600">'+lbl+'</div>'
       +'<div style="flex:1;height:34px;background:rgba(255,255,255,.04);border-radius:8px;position:relative;overflow:hidden">'
       +'<div style="height:100%;width:'+Math.max(9,w)+'%;background:linear-gradient(90deg,'+color+'99,'+color+');border-radius:8px;display:flex;align-items:center;padding-left:12px"><span style="font-size:1.05rem;color:#fff;font-weight:800">'+cnt+'</span></div></div>'
-      +'<div style="width:104px;font-size:.64rem;color:var(--text-muted);flex-shrink:0;text-align:right;line-height:1.3">'+(rate||'')+'</div></div>';
+      +'<div style="width:110px;font-size:.64rem;color:var(--text-muted);flex-shrink:0;text-align:right;line-height:1.3">'+(rate||'')+'</div></div>';
   }
-  var funnel=fbar('\ud83c\udd95 アポ取得',appt,'#3d6fa8','')
-    +fbar('\ud83e\udd1d 商談中',talk,'#3f89c8', tot?('アポ→商談 '+Math.round(talk/tot*100)+'%'):'')
-    +fbar('\ud83c\udf89 契約',con,'#4aa9bc', tot?('全体の契約率 '+Math.round(con/tot*100)+'%'):'');
+  var funnel=fbar('📞 架電',calls,'#3d6fa8','')
+    +fbar('🤝 アポ・商談',appts,'#3f89c8', calls?('アポ率 '+Math.round(appts/calls*100)+'%'):'')
+    +fbar('🎉 新規契約',cons,'#4aa9bc', appts?('成約率 '+Math.round(cons/appts*100)+'%'):'');
   var deals=active.filter(function(p){return p.stage==='appt'||p.stage==='talking';});
   var hi=deals.filter(function(p){return (parseInt(p.probability)||0)>=80;}).length;
   var mid=deals.filter(function(p){var n=parseInt(p.probability)||0;return n>=50&&n<80;}).length;
   var lo=deals.filter(function(p){return (parseInt(p.probability)||0)<50;}).length;
-  function chip(lbl,val,color){ return '<div style="flex:1;text-align:center;padding:10px 6px;background:rgba(255,255,255,.03);border-radius:8px;border-top:2px solid '+color+'"><div style="font-size:1.4rem;font-weight:800;color:'+color+'">'+val+'</div><div style="font-size:.56rem;color:var(--text-muted)">'+lbl+'</div></div>'; }
-  var summary='<div style="display:flex;gap:8px;margin-bottom:10px">'
-    +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>'
-        ;
+  function chip(lbl,val,color){ return '<div style="flex:1;text-align:center;padding:14px 6px;background:rgba(255,255,255,.03);border-radius:8px;border-top:2px solid '+color+'"><div style="font-size:1.6rem;font-weight:800;color:'+color+'">'+val+'</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:2px">'+lbl+'</div></div>'; }
+  var summary='<div style="display:flex;gap:8px">'
+    +chip('高確度 80%+',hi,'#5ea888')+chip('中 50-79%',mid,'#c9b25e')+chip('低 -49%',lo,'#cf8080')+'</div>';
   el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">\ud83d\udd3b パイプライン ファネル</div>'+funnel+'</div>'
-    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">\ud83c\udfaf 確度サマリー</div>'+summary+'</div></div>';
+    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🔻 パイプライン ファネル</div>'+funnel+'</div>'
+    +'<div class="glass" style="padding:16px"><div style="font-weight:700;color:#8fc0f0;font-size:.9rem;margin-bottom:12px">🎯 確度サマリー（進行中の商談）</div>'+summary+'</div></div>';
 }
 function renderPipeGantt(pl){
   var el=document.getElementById('pipe2-gantt'); if(!el) return;
