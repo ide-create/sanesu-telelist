@@ -2194,7 +2194,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談共有版㊺</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 商談編集版㊻</span>
   <button class="btn btn-ghost btn-sm" onclick="openGoalSettings()" style="font-size:.62rem;padding:5px 14px;letter-spacing:1px">⚙ 目標をまとめて変更</button>
 </div>
 
@@ -6790,7 +6790,6 @@ function saveResult() {
   /* 結果別処理 */
   if (_resultType === 'contract') {
     const memo = document.getElementById('res-contract-memo')?.value.trim();
-    if (!memo) { toast('商談メモを入力してください', 'err'); return; }
     const tanka = parseFloat(document.getElementById('res-haken-tanka')?.value || 0);
     const startDate = document.getElementById('res-contract-start')?.value || '';
     const totalStaff = parseInt(document.getElementById('res-total-staff')?.value || 0);
@@ -6812,7 +6811,6 @@ function saveResult() {
   } else if (_resultType === 'lost') {
     const reason = document.getElementById('res-lost-reason')?.value || '';
     const memo   = document.getElementById('res-lost-memo')?.value.trim();
-    if (!memo)   { toast('商談メモを入力してください', 'err'); return; }
     c.dealHistory.push({ date:resDate.slice(0,10), time:resDate.slice(11,16)||'', type:'訪問',
       participants:resContact, content:memo, nextAction:'失注' });
     c.stage      = 'lost';
@@ -6823,7 +6821,6 @@ function saveResult() {
 
   } else if (_resultType === 'talking') {
     const memo       = document.getElementById('res-talking-memo')?.value.trim();
-    if (!memo)       { toast('商談メモを入力してください', 'err'); return; }
     const nextVisit  = document.getElementById('res-talking-next')?.value || '';
     const nextAction = document.getElementById('res-talking-action')?.value.trim() || '';
     c.dealHistory.push({ date:resDate.slice(0,10), time:resDate.slice(11,16)||'', type:'訪問',
@@ -7906,21 +7903,15 @@ function handleStageMove(id, newStage) {
   const card = pipeline.find(p => p.id === id);
   if (!card || card.stage === newStage) return;
 
-  /* 契約済 → 結果入力モーダル経由 */
+  /* 契約 → クラウドに契約を記録（モーダルは開かない） */
   if (newStage === 'contract' || newStage === 'won') {
-    openResultModal(id);
-    /* モーダルで 契約獲得 を自動選択 */
-    setTimeout(() => selectResultType('contract'), 50);
-    return;
+    newStage = 'contract';
+    card.contractDate = card.contractDate || getTodayStr();
+    try{ if(window.fbLog) fbLog('contract',{area:companyArea(card), company:card.company, amount:(parseFloat(card.unitPrice)||0), route:(card.route||'')}); }catch(e){}
   }
-  /* 失注 → 結果入力モーダル経由 */
-  if (newStage === 'lost') {
-    openResultModal(id);
-    setTimeout(() => selectResultType('lost'), 50);
-    return;
-  }
+  if (newStage === 'lost') { card.lostAt = getTodayStr(); }
 
-  /* その他（アポ取得↔商談中） */
+  /* ステージを直接移動 */
   card.stage = newStage;
   try{ if(newStage==='talking' && window.fbLog) fbLog('nego',{area:companyArea(card), company:card.company}); }catch(e){}
   save(); renderPipelineV2(); updateKPIs(); renderSchedule(); updateBadges();
