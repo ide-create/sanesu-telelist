@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電修正版72</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 エリア初期値版73</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3285,8 +3285,25 @@ function saveCallBaseline(){ localStorage.setItem('sanesu_call_baseline', JSON.s
 /* 旧callAdjust（固定上書き）は基準値へ移行 */
 let callAdjust = JSON.parse(localStorage.getItem('sanesu_call_adjust') || '{}');
 function saveCallAdjust(){ localStorage.setItem('sanesu_call_adjust', JSON.stringify(callAdjust)); }
+var BL_AREAS = ['愛知','静岡','三重','岐阜'];
+function _blMonthVal(v){
+  /* v が数値（旧形式）なら愛知に寄せる。オブジェクトならエリア別 */
+  if(v==null||v==='') return {};
+  if(typeof v==='object') return v;
+  var o={}; o['愛知']=parseInt(v)||0; return o;
+}
 function baselineTotal(){
-  var t=0; for(var k in callBaseline){ if(callBaseline[k]!=null && callBaseline[k]!=='') t += parseInt(callBaseline[k])||0; } return t;
+  var t=0;
+  for(var k in callBaseline){ var mv=_blMonthVal(callBaseline[k]); for(var a in mv){ t += parseInt(mv[a])||0; } }
+  return t;
+}
+function baselineByArea(){
+  var out={}; BL_AREAS.forEach(function(a){ out[a]=0; });
+  for(var k in callBaseline){ var mv=_blMonthVal(callBaseline[k]); for(var a in mv){ if(out[a]==null) out[a]=0; out[a]+=parseInt(mv[a])||0; } }
+  return out;
+}
+function baselineByMonth(key){
+  var mv=_blMonthVal(callBaseline[key]); var t=0; for(var a in mv){ t+=parseInt(mv[a])||0; } return t;
 }
 function totalAdjustedCalls(){ return baselineTotal(); }
 let competitorNotes = {};
@@ -7883,14 +7900,18 @@ function openCallAdjust(){
     m++; if(m>12){ m=1; y++; } if(months.length>24) break;
   }
   var rows = months.map(function(mm){
-    var v = (callBaseline && callBaseline[mm.key]!=null) ? callBaseline[mm.key] : '';
-    return '<div style=\"display:flex;align-items:center;gap:12px;margin-bottom:10px\">'
-      +'<label style=\"width:120px;font-size:.82rem;color:#dce9fa\">'+mm.label+'</label>'
-      +'<input type=\"number\" min=\"0\" id=\"adj-'+mm.key+'\" value=\"'+v+'\" placeholder=\"0\" style=\"flex:1;padding:8px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-family:var(--mono)\">'
-      +'<span style=\"font-size:.72rem;color:var(--text-muted)\">\u4ef6</span></div>';
+    var mv = _blMonthVal(callBaseline[mm.key]);
+    var inputs = BL_AREAS.map(function(ar){
+      var v = (mv[ar]!=null) ? mv[ar] : '';
+      return '<div style=\"display:flex;flex-direction:column;gap:3px\">'
+        +'<span style=\"font-size:.62rem;color:var(--text-muted)\">'+ar+'</span>'
+        +'<input type=\"number\" min=\"0\" id=\"bl-'+mm.key+'-'+ar+'\" value=\"'+v+'\" placeholder=\"0\" style=\"width:100%;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-family:var(--mono);font-size:.78rem\"></div>';
+    }).join('');
+    return '<div style=\"margin-bottom:14px\"><div style=\"font-size:.8rem;color:#dce9fa;font-weight:600;margin-bottom:6px\">'+mm.label+'</div>'
+      +'<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:8px\">'+inputs+'</div></div>';
   }).join('');
   var body = '<div style=\"background:rgba(90,160,224,.08);border:1px solid rgba(90,160,224,.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:.72rem;color:#9fd0f5;line-height:1.6\">'
-    +'\u5225\u30b5\u30a4\u30c8\u3067\u884c\u3063\u305f\u67b6\u96fb\u306e\u521d\u671f\u5024\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\u3002<br><b>\u3053\u306e\u521d\u671f\u5024\u306b\u3001\u4eca\u5f8c\u3053\u306e\u30b5\u30a4\u30c8\u3067\u67b6\u96fb\u3057\u305f\u5206\u304c\u81ea\u52d5\u3067\u4e0a\u4e57\u305b\u3055\u308c\u307e\u3059\u3002</b></div>' + rows;
+    +'\u5225\u30b5\u30a4\u30c8\u3067\u884c\u3063\u305f\u67b6\u96fb\u306e\u521d\u671f\u5024\u3092\u3001\u6708\u00d7\u30a8\u30ea\u30a2\u3054\u3068\u306b\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\u3002<br><b>\u4f8b\uff1a6\u6708\u306e\u611b\u77e5\uff1d70\u30017\u6708\u306e\u9759\u5ca1\uff1d45</b></div>' + rows;
   var el = document.getElementById('call-adjust-body'); if(el) el.innerHTML = body;
   openModal('ov-call-adjust');
 }
@@ -7898,8 +7919,12 @@ function saveCallAdjustModal(){
   var now=new Date(), y=2026, m=6;
   while (y < now.getFullYear() || (y===now.getFullYear() && m <= now.getMonth()+1)) {
     var key = y+'-'+String(m).padStart(2,'0');
-    var inp = document.getElementById('adj-'+key);
-    if(inp){ var val = inp.value.trim(); if(val===''||val==='0') { delete callBaseline[key]; } else { callBaseline[key] = parseInt(val)||0; } }
+    var mv = {};
+    BL_AREAS.forEach(function(ar){
+      var inp = document.getElementById('bl-'+key+'-'+ar);
+      if(inp){ var val=inp.value.trim(); if(val!==''&&val!=='0'){ mv[ar]=parseInt(val)||0; } }
+    });
+    if(Object.keys(mv).length) callBaseline[key]=mv; else delete callBaseline[key];
     m++; if(m>12){ m=1; y++; } if(m>24 && y>now.getFullYear()) break;
   }
   saveCallBaseline();
@@ -7930,7 +7955,7 @@ function renderMonthlyTrend(targetId){
     (callList||[]).forEach(function(c){ (c.callHistory||[]).forEach(function(h){ var k=mkey(h.date); if(k) data[k].call++; }); });
     (salesCallArchive||[]).forEach(function(s3){ (s3.calls||[]).forEach(function(c){ var k=mkey(c.date); if(k) data[k].call++; }); });
     /* 井手の初期値（別サイト引き継ぎ）を各月に加算（管理者のみ・実記録に上乗せ） */
-    if(admin){ months.forEach(function(mm){ if(callBaseline[mm.key]!=null && callBaseline[mm.key]!==''){ data[mm.key].call += parseInt(callBaseline[mm.key])||0; } }); }
+    if(admin){ months.forEach(function(mm){ data[mm.key].call += baselineByMonth(mm.key); }); }
   }catch(e){}
   /* 管理者：他メンバーのクラウド架電記録を加算（アポ・商談は下で商談カードから集計） */
   if(admin && window._allActivity){
@@ -10053,9 +10078,12 @@ function buildAdminAggHtml(events){
   /* area table */
   var arows='';
   var dcArea = dealCountsBy('area');
+  var blArea = baselineByArea();
   AGG_AREAS.forEach(function(ar){
     var evs=events.filter(function(e){ return (e.area||'')===ar; });
     var m=_aggMetrics(evs);
+    /* 井手の初期値（エリア別）を架電に加算 */
+    m.call += (blArea[ar]||0); m.calls = m.call;
     var dc = dcArea[ar] || {appt:0, contract:0};
     m.appt = dc.appt; m.nego = dc.appt; m.contract = dc.contract;
     m.apptRate = m.calls ? Math.round(m.appt/m.calls*100) : 0;
