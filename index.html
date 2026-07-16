@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 新API検索版67</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電調整版68</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3167,6 +3167,21 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
   </div>
 </div>
 
+<!-- MODAL: 月別架電数の調整 -->
+<div class="overlay" id="ov-call-adjust">
+  <div class="modal" style="max-width:460px">
+    <div class="m-head">
+      <h3>✏️ 月別 架電数の調整</h3>
+      <button class="xbtn" onclick="closeModal('ov-call-adjust')">✕</button>
+    </div>
+    <div class="m-body" id="call-adjust-body"></div>
+    <div class="m-foot">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-call-adjust')">キャンセル</button>
+      <button class="btn btn-cyan btn-sm" onclick="saveCallAdjustModal()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 企業一括取り込み -->
 <div class="overlay" id="ov-import">
   <div class="modal" style="max-width:640px">
@@ -3263,6 +3278,20 @@ let leadBatches = [], callList = [], mailList = [], pipeline = [];
 let salesList = [];  /* 営業リスト（架電を積み重ねる台帳） */
 let salesCallArchive = [];  /* 削除した企業の架電記録を保持し、削除しても架電数を減らさない */
 const BASE_CALLS = 70;  /* 過去（アプリ導入前）の架電数。総架電数に加算する */
+/* 月ごとの架電数 手動調整（管理者が実績に合わせて上書き）。{ 'YYYY-MM': 件数 } */
+let callAdjust = JSON.parse(localStorage.getItem('sanesu_call_adjust') || '{}');
+function saveCallAdjust(){ localStorage.setItem('sanesu_call_adjust', JSON.stringify(callAdjust)); }
+function adjustedMonthlyCalls(key, autoCount){
+  /* 手動値があればそれを優先（実績値）。無ければ自動集計 */
+  if (callAdjust && callAdjust[key] != null && callAdjust[key] !== '') return parseInt(callAdjust[key]) || 0;
+  return autoCount;
+}
+function totalAdjustedCalls(){
+  /* 手動調整の合計（設定済みの月）＋未設定月は自動。ここでは手動値の総和を返す用途に使用 */
+  var t = 0;
+  for (var k in callAdjust) { if (callAdjust[k]!=null && callAdjust[k]!=='') t += parseInt(callAdjust[k])||0; }
+  return t;
+}
 let competitorNotes = {};
 let weeklyGoals  = { callGoal:  50, apptGoal:  5, contractGoal: 1 };
 let monthlyGoals = { callGoal: 200, apptGoal: 20, contractGoal: 5 };
@@ -7849,6 +7878,38 @@ function _renderPipelineV2Impl() {
 
 /* ═══ 停滞アラート ═══ */
 /* ═══ 月別推移（架電・アポ・契約） ═══ */
+function openCallAdjust(){
+  if(!isAdminUser()) return;
+  var now=new Date(), months=[]; var y=2026, m=6;
+  while (y < now.getFullYear() || (y===now.getFullYear() && m <= now.getMonth()+1)) {
+    months.push({key:y+'-'+String(m).padStart(2,'0'), label:y+'年'+m+'月'});
+    m++; if(m>12){ m=1; y++; } if(months.length>24) break;
+  }
+  var rows = months.map(function(mm){
+    var v = (callAdjust && callAdjust[mm.key]!=null) ? callAdjust[mm.key] : '';
+    return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+      +'<label style="width:120px;font-size:.82rem;color:#dce9fa">'+mm.label+'</label>'
+      +'<input type="number" min="0" id="adj-'+mm.key+'" value="'+v+'" placeholder="自動集計を使用" style="flex:1;padding:8px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-family:var(--mono)">'
+      +'<span style="font-size:.72rem;color:var(--text-muted)">件</span></div>';
+  }).join('');
+  var body = '<div style="background:rgba(90,160,224,.08);border:1px solid rgba(90,160,224,.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:.72rem;color:#9fd0f5;line-height:1.6">各月の実際の架電数を入力すると、その数字でグラフに表示されます。<br>空欄のままにすると、アプリが自動集計した数字を使います。</div>' + rows;
+  var el = document.getElementById('call-adjust-body'); if(el) el.innerHTML = body;
+  openModal('ov-call-adjust');
+}
+function saveCallAdjustModal(){
+  var now=new Date(), y=2026, m=6;
+  while (y < now.getFullYear() || (y===now.getFullYear() && m <= now.getMonth()+1)) {
+    var key = y+'-'+String(m).padStart(2,'0');
+    var inp = document.getElementById('adj-'+key);
+    if(inp){ var val = inp.value.trim(); if(val==='') { delete callAdjust[key]; } else { callAdjust[key] = parseInt(val)||0; } }
+    m++; if(m>12){ m=1; y++; } if(m>24 && y>now.getFullYear()) break;
+  }
+  saveCallAdjust();
+  closeModal('ov-call-adjust');
+  try{ renderDashAnalytics(); }catch(e){}
+  toast('架電数を更新しました','ok');
+}
+
 function renderMonthlyTrend(targetId){
   var el=document.getElementById(targetId||'db-trend'); if(!el) return;
   var admin=isAdminUser();
@@ -7871,6 +7932,8 @@ function renderMonthlyTrend(targetId){
     (salesCallArchive||[]).forEach(function(s3){ (s3.calls||[]).forEach(function(c){ var k=mkey(c.date); if(k) data[k].call++; }); });
     /* 導入前の架電（BASE_CALLS）は6月に計上（管理者のみ） */
     if(admin && typeof BASE_CALLS!=='undefined' && data['2026-06']) data['2026-06'].call += BASE_CALLS;
+    /* 月ごとの手動調整（実績値）で上書き */
+    months.forEach(function(mm){ if(callAdjust && callAdjust[mm.key]!=null && callAdjust[mm.key]!==''){ data[mm.key].call = parseInt(callAdjust[mm.key])||0; } });
     (pipeline||[]).forEach(function(p){
       var mk=((p.meetingDate||p.createdAt||'')+'').slice(0,7);
       if(data[mk] && (p.stage==='talking'||p.stage==='contract'||p.stage==='lost')) data[mk].appt++;
@@ -7904,8 +7967,9 @@ function renderMonthlyTrend(targetId){
   }).join('');
   var legend='<div style="display:flex;gap:18px;justify-content:center;margin-top:12px;font-size:.7rem">'
     +'<span style="color:#3d6fa8">■ 架電</span><span style="color:#5ea888">■ アポ・商談</span></div>';
+  var adjBtn = admin ? '<button onclick="openCallAdjust()" style="float:right;font-size:.6rem;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--text-sub);cursor:pointer">✏ 架電数を調整</button>' : '';
   el.innerHTML='<div class="glass" style="padding:18px 20px;height:100%"><div style="font-weight:700;color:#8fc0f0;font-size:1rem;margin-bottom:4px">📈 月別推移'
-    +(admin?'<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:8px">全員合算</span>':'')+'</div>'
+    +(admin?'<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:8px">全員合算</span>':'')+adjBtn+'</div>'
     +'<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:14px">2026年6月〜（アプリで記録した分）</div>'
     +'<div style="display:flex;gap:10px;align-items:flex-end">'+bars+'</div>'+legend+'</div>';
 }
@@ -7995,6 +8059,8 @@ function renderPipeFunnel(pl, targetId){
     var fromArch=(salesCallArchive||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
     var fromCalls=(callList||[]).reduce(function(s,x){ return s+((x.callHistory||[]).length); },0);
     calls=base+fromSales+fromArch+fromCalls;
+    /* 管理者が月別調整で実績を入れている場合、自分の架電はその合計を優先 */
+    if(admin){ var manual=totalAdjustedCalls(); if(manual>0) calls=manual; }
     if(admin && window._kpiDelta) calls += (window._kpiDelta.calls||0);   /* 他メンバー分 */
   }catch(e){ calls=0; }
   /* ── アポ・商談／契約：管理者は自分のカード＋他メンバーのクラウド分 ── */
