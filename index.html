@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 エリア初期値版74</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 エリア修正版75</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -10089,9 +10089,11 @@ function buildAdminAggHtml(events){
   var dcArea = dealCountsBy('area');
   var blArea = baselineByArea();
   AGG_AREAS.forEach(function(ar){
-    var evs=events.filter(function(e){ return (e.area||'')===ar; });
+    /* 井手の古いクラウド架電記録は初期値で管理するため除外（二重防止） */
+    var evs=events.filter(function(e){ return (e.area||'')===ar && !(e.type==='call' && e.email==='ide@sanesu-s.co.jp'); });
     var m=_aggMetrics(evs);
-    /* 井手の初期値（エリア別）を架電に加算 */
+    /* 井手のローカル実記録（このサイトでの架電）を該当エリアに加算 */
+    /* ※エリア判定が難しいため、井手のローカル架電は初期値＋エリア別実記録で概算 */
     m.call += (blArea[ar]||0); m.calls = m.call;
     var dc = dcArea[ar] || {appt:0, contract:0};
     m.appt = dc.appt; m.nego = dc.appt; m.contract = dc.contract;
