@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 エリア初期値版73</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 エリア初期値版74</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3176,6 +3176,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
     </div>
     <div class="m-body" id="call-adjust-body"></div>
     <div class="m-foot">
+      <button class="btn btn-ghost btn-sm" onclick="resetCallBaseline()" style="color:#cf8080;border-color:rgba(207,128,128,.4)">🗑 全クリア</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('ov-call-adjust')">キャンセル</button>
       <button class="btn btn-cyan btn-sm" onclick="saveCallAdjustModal()">💾 保存</button>
     </div>
@@ -7914,6 +7915,14 @@ function openCallAdjust(){
     +'\u5225\u30b5\u30a4\u30c8\u3067\u884c\u3063\u305f\u67b6\u96fb\u306e\u521d\u671f\u5024\u3092\u3001\u6708\u00d7\u30a8\u30ea\u30a2\u3054\u3068\u306b\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\u3002<br><b>\u4f8b\uff1a6\u6708\u306e\u611b\u77e5\uff1d70\u30017\u6708\u306e\u9759\u5ca1\uff1d45</b></div>' + rows;
   var el = document.getElementById('call-adjust-body'); if(el) el.innerHTML = body;
   openModal('ov-call-adjust');
+}
+function resetCallBaseline(){
+  if(!confirm('架電の初期値を全てクリアします。よろしいですか？')) return;
+  callBaseline = {}; saveCallBaseline();
+  closeModal('ov-call-adjust');
+  try{ renderDashAnalytics(); }catch(e){}
+  try{ renderAdminAgg(); }catch(e){}
+  toast('初期値をクリアしました。もう一度エリア別に入力してください','def');
 }
 function saveCallAdjustModal(){
   var now=new Date(), y=2026, m=6;
