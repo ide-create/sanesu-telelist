@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電調整版68</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 常時全員版69</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -8193,7 +8193,7 @@ function buildP2Card(c, stage) {
   const dtHtml  = c.meetingDate ? `<div class="p2-card-row">📅 ${fmtDt(c.meetingDate)}</div>` : '';
   const nextHtml = buildNextActionHtml(c);
   const routeHtml = c.route ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;border:1px solid ${routeColor(c.route)}55;color:${routeColor(c.route)};margin-top:4px">${routeLabel(c.route)}</span>` : '';
-  const ownerHtml = (window._showAllDeals && c.email) ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;background:rgba(143,192,240,.14);color:#8fc0f0;margin-top:4px;margin-left:4px">\ud83d\udc64 ${(MEMBER_NAMES[c.email]||c.email)}</span>` : '';
+  const ownerHtml = (c.email) ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;background:rgba(143,192,240,.14);color:#8fc0f0;margin-top:4px;margin-left:4px">\ud83d\udc64 ${(MEMBER_NAMES[c.email]||c.email)}</span>` : '';
 
   /* 契約済は結果入力ボタン非表示 */
   const resultBtn = c.stage !== 'contract'
@@ -10159,14 +10159,21 @@ function loadAllDeals(cb){
     renderPipelineV2();
   }).catch(function(e){ console.error(e); toast('読み込みエラー: '+(e.message||e),'err'); });
 }
-function toggleAllDeals(){
-  window._showAllDeals = !window._showAllDeals;
-  if(window._showAllDeals){ toast('全員の商談を読み込み中...','def'); loadAllDeals(); }
-  else { renderPipelineV2(); }
-}
+function toggleAllDeals(){ /* トグル廃止：常に全員表示 */ loadAllDeals(); }
 /* 表示に使うカード群（管理者×ONなら全員） */
 function pipeView(){
-  if(isAdminUser() && window._showAllDeals && window._allDeals) return window._allDeals;
+  /* 管理者は常に全員の商談を表示。未取得なら取得して再描画 */
+  if(isAdminUser()){
+    if(window._allDeals) return window._allDeals;
+    if(!window.__pipeDealsLoading && window._db){
+      window.__pipeDealsLoading = true;
+      window._db.collection('deals').get().then(function(snap){
+        var arr=[]; snap.forEach(function(d){ arr.push(d.data()); });
+        window._allDeals = arr; window.__pipeDealsLoading = false;
+        try{ renderPipelineV2(); }catch(e){}
+      }).catch(function(e){ window.__pipeDealsLoading=false; console.error(e); });
+    }
+  }
   return pipeline || [];
 }
 /* 他人のカードを編集 → クラウドに保存 */
@@ -10190,10 +10197,9 @@ function renderDealToggle(){
   if(!logged){ el.innerHTML=''; return; }
   var h='';
   if(isAdminUser()){
-    var on = !!window._showAllDeals;
-    h += '<button class="pipe2-add-manual" onclick="toggleAllDeals()" style="margin-left:8px;'+(on?'background:rgba(94,168,136,.22);border-color:rgba(94,168,136,.7);color:#9fe0c0':'')+'">\ud83d\udc65 '+(on?'全員の商談：ON':'全員の商談を表示')+'</button>';
+    h += '<button class="pipe2-add-manual" onclick="loadAllDeals()" style="margin-left:8px">\ud83d\udd04 最新を再読み込み</button>';
   }
-  h += '<button class="pipe2-add-manual" onclick="fbUploadAllDeals()" style="margin-left:6px;border-color:rgba(212,175,55,.5);color:#f0d98c" title="このPCの商談カードをクラウドに保存します">\u2b06 商談をクラウドに反映</button>';
+  h += '<button class="pipe2-add-manual" onclick="fbUploadAllDeals()" style="margin-left:6px;border-color:rgba(212,175,55,.5);color:#f0d98c" title="\u3053\u306ePC\u306e\u5546\u8ac7\u30ab\u30fc\u30c9\u3092\u30af\u30e9\u30a6\u30c9\u306b\u4fdd\u5b58">\u2b06 \u5546\u8ac7\u3092\u30af\u30e9\u30a6\u30c9\u306b\u53cd\u6620</button>';
   el.innerHTML = h;
 }
 function renderAdminAgg(){
@@ -10229,6 +10235,7 @@ bootApp = function() {
   try { goTab('sl'); } catch(e) {}
   try { if(isAdminUser()){ refreshAdminKpiBoard(); if(!window.__kpiTimer) window.__kpiTimer=setInterval(refreshAdminKpiBoard, 60000); } } catch(e){}
   try { if(isAdminUser()) loadAllActivity(); } catch(e){}
+  try { if(isAdminUser()) loadAllDeals(); } catch(e){}
 };
 </script>
 </body>
