@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電初期値版71</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電修正版72</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -9999,6 +9999,16 @@ function buildAdminAggHtml(events){
   var _apptAll=0, _conAll=0;
   Object.keys(_dcAll).forEach(function(k){ _apptAll+=_dcAll[k].appt; _conAll+=_dcAll[k].contract; });
   all.appt=_apptAll; all.nego=_apptAll; all.contract=_conAll;
+  /* 総架電数：井手＝初期値＋ローカル、他メンバー＝クラウド記録（二重防止） */
+  var _ideLocal=0;
+  try{
+    _ideLocal += (salesList||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+    _ideLocal += (salesCallArchive||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+    _ideLocal += (callList||[]).reduce(function(s,x){ return s+((x.callHistory||[]).length); },0);
+  }catch(e){}
+  var _otherCalls = events.filter(function(e){ return e.type==='call' && e.email!=='ide@sanesu-s.co.jp'; }).length;
+  all.call = baselineTotal() + _ideLocal + _otherCalls;
+  all.calls = all.call;
   all.apptRate = all.calls ? Math.round(all.appt/all.calls*100) : 0;
   all.winRate  = all.appt ? Math.round(all.contract/all.appt*100) : 0;
   /* cards */
@@ -10021,8 +10031,17 @@ function buildAdminAggHtml(events){
   Object.keys(MEMBER_NAMES).forEach(function(em){
     var evs=events.filter(function(e){ return e.email===em; });
     var m=_aggMetrics(evs);
-    /* 井手：別サイト引き継ぎの初期値を架電に加算 */
-    if(em==='ide@sanesu-s.co.jp'){ m.call += baselineTotal(); m.calls = m.call; }
+    /* 井手：クラウドの古い架電記録は使わず、初期値＋このサイトのローカル実記録のみ */
+    if(em==='ide@sanesu-s.co.jp'){
+      var localCalls = 0;
+      try{
+        localCalls += (salesList||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+        localCalls += (salesCallArchive||[]).reduce(function(s,x){ return s+((x.calls||[]).length); },0);
+        localCalls += (callList||[]).reduce(function(s,x){ return s+((x.callHistory||[]).length); },0);
+      }catch(e){}
+      m.call = baselineTotal() + localCalls;
+      m.calls = m.call;
+    }
     /* アポ・商談・契約は商談カード数で上書き（アポ＝商談＝同数） */
     var dc = dcMember[em] || {appt:0, contract:0};
     m.appt = dc.appt; m.nego = dc.appt; m.contract = dc.contract;
