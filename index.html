@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 常時全員版69</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 分析一致版70</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -9973,10 +9973,34 @@ function _aggTable(title, rows){
     +'<th style="padding:6px 4px;font-size:.66rem;color:var(--text-muted)">\u6210\u7d04\u7387</th></tr>';
   return '<table style="width:100%;border-collapse:collapse;font-size:.8rem">'+head+rows+'</table>';
 }
+/* 商談カード（deals）から、アポ・商談数と契約数を集計。アポ＝商談＝同数 */
+function dealCountsBy(keyType){
+  /* keyType: 'email' or 'area'。戻り値 { key: {appt, contract} } */
+  var src = (window._allDeals && window._allDeals.length) ? window._allDeals : (pipeline||[]);
+  var out = {};
+  src.forEach(function(p){
+    if(!p) return;
+    var key;
+    if(keyType==='email'){ key = p.email || 'ide@sanesu-s.co.jp'; }
+    else { try{ key = companyArea(p) || '愛知'; }catch(e){ key='愛知'; } }
+    if(!out[key]) out[key]={appt:0, contract:0};
+    /* アポ・商談＝アポ商談＋契約＋NG（＝商談した全企業） */
+    if(p.stage==='talking' || p.stage==='contract' || p.stage==='lost') out[key].appt++;
+    if(p.stage==='contract') out[key].contract++;
+  });
+  return out;
+}
 function buildAdminAggHtml(events){
   var MEMBER_NAMES = {'ide@sanesu-s.co.jp':'井手','yoshiyama@sanesu-s.co.jp':'芳山','kodama@sanesu-s.co.jp':'児玉','yamamura@sanesu-s.co.jp':'山村'};
   var AGG_AREAS = ['愛知','三重','岐阜','静岡'];
   var all=_aggMetrics(events);
+  /* アポ・商談・契約は全商談カード数で（アポ＝商談＝同数） */
+  var _dcAll = dealCountsBy('email');
+  var _apptAll=0, _conAll=0;
+  Object.keys(_dcAll).forEach(function(k){ _apptAll+=_dcAll[k].appt; _conAll+=_dcAll[k].contract; });
+  all.appt=_apptAll; all.nego=_apptAll; all.contract=_conAll;
+  all.apptRate = all.calls ? Math.round(all.appt/all.calls*100) : 0;
+  all.winRate  = all.appt ? Math.round(all.contract/all.appt*100) : 0;
   /* cards */
   function card(lbl,val,color,sub){
     return '<div class="glass" style="padding:14px 16px;text-align:center"><div style="font-size:.6rem;letter-spacing:1px;color:var(--text-muted)">'+lbl+'</div>'
@@ -9993,17 +10017,28 @@ function buildAdminAggHtml(events){
     +'</div>';
   /* member table */
   var mrows='';
+  var dcMember = dealCountsBy('email');
   Object.keys(MEMBER_NAMES).forEach(function(em){
     var evs=events.filter(function(e){ return e.email===em; });
     var m=_aggMetrics(evs);
+    /* アポ・商談・契約は商談カード数で上書き（アポ＝商談＝同数） */
+    var dc = dcMember[em] || {appt:0, contract:0};
+    m.appt = dc.appt; m.nego = dc.appt; m.contract = dc.contract;
+    m.apptRate = m.calls ? Math.round(m.appt/m.calls*100) : 0;
+    m.winRate  = m.appt  ? Math.round(m.contract/m.appt*100) : 0;
     mrows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+MEMBER_NAMES[em]+'</td>'+_aggRowCells(m)+'<td style="text-align:center"><button onclick="fbDeleteMemberActivity(\''+em+'\')" title="このメンバーの記録を全削除" style="background:none;border:none;color:#c66;cursor:pointer;font-size:.85rem">🗑</button></td></tr>';
   });
   var memberTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:8px;font-size:.9rem">\ud83d\udc65 \u30e1\u30f3\u30d0\u30fc\u5225</div>'+_aggTable('\u30e1\u30f3\u30d0\u30fc',mrows)+'</div>';
   /* area table */
   var arows='';
+  var dcArea = dealCountsBy('area');
   AGG_AREAS.forEach(function(ar){
     var evs=events.filter(function(e){ return (e.area||'')===ar; });
     var m=_aggMetrics(evs);
+    var dc = dcArea[ar] || {appt:0, contract:0};
+    m.appt = dc.appt; m.nego = dc.appt; m.contract = dc.contract;
+    m.apptRate = m.calls ? Math.round(m.appt/m.calls*100) : 0;
+    m.winRate  = m.appt  ? Math.round(m.contract/m.appt*100) : 0;
     arows+='<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:7px 8px;color:#fff">'+ar+'</td>'+_aggRowCells(m)+'</tr>';
   });
   var areaTbl='<div class="glass" style="padding:16px;margin-bottom:16px"><div style="font-weight:700;color:#8fc0f0;margin-bottom:8px;font-size:.9rem">\ud83d\uddfe \u30a8\u30ea\u30a2\u5225</div>'+_aggTable('\u30a8\u30ea\u30a2',arows)+'</div>';
