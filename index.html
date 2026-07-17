@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 架電日別版76</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 新規アポ表示版77</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -4974,7 +4974,7 @@ function confirmSalesAppt() {
   syncPipeline(s.name, s.phone, 'appointment', contact);
   const p = pipeline.find(x => x.company === s.name);
   const route = document.getElementById('sa-route')?.value || 'tel';
-  if (p) { p.meetingDate = meeting; p.route = route; }
+  if (p) { p.meetingDate = meeting; p.route = route; p.isNewAppt = true; p.apptCreatedAt = Date.now(); }
   save();
   renderSalesList(); renderDashboard3Col(); updateKPIs(); updateBadges(); renderPipeline(); renderSchedule();
   try{ if(window.fbLog){ fbLog('call',{area:companyArea(s), company:s.name}); fbLog('appt',{area:companyArea(s), company:s.name, route:route}); } }catch(e){}
@@ -8287,18 +8287,22 @@ function buildP2Card(c, stage) {
   const nextHtml = buildNextActionHtml(c);
   const routeHtml = c.route ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;border:1px solid ${routeColor(c.route)}55;color:${routeColor(c.route)};margin-top:4px">${routeLabel(c.route)}</span>` : '';
   const ownerHtml = (c.email) ? `<span style="display:inline-block;font-size:.58rem;padding:2px 7px;border-radius:9px;background:rgba(143,192,240,.14);color:#8fc0f0;margin-top:4px;margin-left:4px">\ud83d\udc64 ${(MEMBER_NAMES[c.email]||c.email)}</span>` : '';
+  /* アポ取得したばかりのカードを目立たせる（未商談の新規アポ） */
+  const isNewAppt = c.isNewAppt && c.stage === 'talking';
+  const newApptBadge = isNewAppt ? `<span style="display:inline-block;font-size:.56rem;padding:2px 8px;border-radius:9px;background:#e0a860;color:#1a1206;margin-top:4px;font-weight:800;box-shadow:0 0 8px rgba(224,168,96,.5)">\ud83c\udd95 新規アポ</span>` : '';
 
   /* 契約済は結果入力ボタン非表示 */
   const resultBtn = c.stage !== 'contract'
     ? ``
     : `<div style="font-size:.65rem;color:rgba(0,255,136,.7);text-align:center;padding:4px">🎉 契約済</div>`;
 
-  return `<div class="p2-card" style="border-left-color:${borderColor}"
+  return `<div class="p2-card" style="border-left-color:${isNewAppt?'#e0a860':borderColor}${isNewAppt?';box-shadow:0 0 0 1px rgba(224,168,96,.4)':''}"
       draggable="true" data-id="${c.id}"
       ondragstart="p2DragStart(event,'${c.id}')" ondragend="p2DragEnd(event)"
       onclick="openPipeDetailV2('${c.id}')">
     <div class="p2-card-company">${esc(company)}</div>
     ${c.contact && c.contact !== 'undefined' ? `<div class="p2-card-contact">👤 ${esc(c.contact)}</div>` : ''}
+    ${newApptBadge}
     ${amtHtml}${dtHtml}${dealInfo}${routeHtml}${ownerHtml}${nextHtml}
     <div class="p2-card-foot">
       ${probBadge(prob)}
@@ -8368,6 +8372,7 @@ function handleStageMove(id, newStage) {
   if (newStage === 'lost') { card.lostAt = getTodayStr(); }
 
   /* ステージを直接移動 */
+  card.isNewAppt = false;  /* 動かしたら新規アポ扱いを解除 */
   card.stage = newStage;
   try{ if(newStage==='talking' && window.fbLog) fbLog('nego',{area:companyArea(card), company:card.company}); }catch(e){}
   save(); renderPipelineV2(); updateKPIs(); renderSchedule(); updateBadges();
@@ -8572,6 +8577,7 @@ function savePsTab1(id){
   c.nextDate    = g('ps1-nextdate')||'';
   c.nextAction  = (g('ps1-nextaction')||'').trim();
   c.memo        = (g('ps1-memo')||'').trim();
+  c.isNewAppt = false;  /* 編集したら新規アポ扱いを解除 */
   if (foreign) { saveForeignDeal(c); renderPipelineV2(); return; }
   save(); renderPipelineV2(); renderSchedule(); updateKPIs();
   toast('保存しました','ok');
