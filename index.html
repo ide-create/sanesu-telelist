@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 新規アポ表示版77</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 アポ商談分離版78</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3431,11 +3431,11 @@ function load() {
   if (!Array.isArray(pipeline)) pipeline = [];
 
   /* ── 商談データ一括修復 ── */
-  const VALID_STAGES = new Set(['talking','contract','lost']);
+  const VALID_STAGES = new Set(['appt','talking','contract','lost']);
   /* 旧7ステージ → 新3ステージへ自動移行 */
   const STAGE_ALIAS = {
-    'apo':'talking', 'appointment':'talking', 'アポ取得':'talking', 'appt':'talking',
-    'visit':'talking',
+    'apo':'appt', 'appointment':'appt', 'アポ取得':'appt', 'appt':'appt',
+    'visit':'appt',
     'proposal':'talking', 'quote':'talking',
     'negotiation':'talking', '商談中':'talking',
     'won':'contract', '受注':'contract',
@@ -7816,12 +7816,12 @@ function _migrateHoldStage(){
   (pipeline||[]).forEach(function(p){
     if(!p) return;
     if(p.stage==='hold'){ p.stage='lost'; n++; }
-    if(p.stage==='appt'){ p.stage='talking'; n++; }   /* アポ＝商談に統合 */
   });
   if(n) { try{ save(); }catch(e){} }
 }
 const PIPE_STAGES = [
-  {id:'talking', icon:'🤝', label:'アポ・商談',   color:'rgba(66,153,225,.65)'},
+  {id:'appt',    icon:'🆕', label:'アポ取得',     color:'rgba(224,168,96,.7)'},
+  {id:'talking', icon:'🤝', label:'商談',         color:'rgba(66,153,225,.65)'},
   {id:'contract',icon:'🎉', label:'新規契約',     color:'rgba(0,255,136,.7)'},
   {id:'lost',    icon:'🚫', label:'新規NG',       color:'rgba(245,101,101,.6)'},
 ];
@@ -8073,7 +8073,7 @@ function renderStallAlert(pl, targetId){
   var t0=new Date(today+'T00:00');
   /* 商談中（NG・契約は除く）で、次回アクション or 次回予定日があるもの */
   var rows=(pl||[]).filter(function(p){
-    return p && p.stage==='talking' && (p.nextAction || p.nextDate);
+    return p && (p.stage==='talking'||p.stage==='appt') && (p.nextAction || p.nextDate);
   }).sort(function(a,b){
     var da=(a.nextDate||'9999'), db=(b.nextDate||'9999');
     return (da+'').localeCompare(db+'');
@@ -8156,14 +8156,15 @@ function renderPipeFunnel(pl, targetId){
     if(admin){ calls += baselineTotal(); }
     if(admin && window._kpiDelta) calls += (window._kpiDelta.calls||0);   /* 他メンバー分 */
   }catch(e){ calls=0; }
-  /* ── アポ・商談／契約：管理者は自分のカード＋他メンバーのクラウド分 ── */
-  var appts=active.filter(function(p){return p.stage==='talking'||p.stage==='contract'||p.stage==='lost';}).length;
+  /* アポ取得＝アポ以降すべて（アポ+商談+契約+NG）／商談＝商談以降（商談+契約） */
+  var appts=active.filter(function(p){return p.stage==='appt'||p.stage==='talking'||p.stage==='contract'||p.stage==='lost';}).length;
+  var talks=active.filter(function(p){return p.stage==='talking'||p.stage==='contract';}).length;
   var cons =active.filter(function(p){return p.stage==='contract';}).length;
   if(admin && window._kpiDelta && !window._showAllDeals){
     appts += (window._kpiDelta.appt||0);
     cons  += (window._kpiDelta.contract||0);
   }
-  var maxc=Math.max(calls,appts,cons,1);
+  var maxc=Math.max(calls,appts,talks,cons,1);
   function fbar(lbl,cnt,color,rate){
     var w=Math.round(cnt/maxc*100);
     return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">'
@@ -8173,10 +8174,11 @@ function renderPipeFunnel(pl, targetId){
       +'<div style="width:110px;font-size:.64rem;color:var(--text-muted);flex-shrink:0;text-align:right;line-height:1.3">'+(rate||'')+'</div></div>';
   }
   var funnel=fbar('📞 架電',calls,'#3d6fa8','')
-    +fbar('🤝 アポ・商談',appts,'#3f89c8', calls?('アポ率 '+Math.round(appts/calls*100)+'%'):'')
-    +fbar('🎉 新規契約',cons,'#4aa9bc', appts?('成約率 '+Math.round(cons/appts*100)+'%'):'');
+    +fbar('🆕 アポ取得',appts,'#e0a860', calls?('アポ率 '+Math.round(appts/calls*100)+'%'):'')
+    +fbar('🤝 商談',talks,'#3f89c8', appts?('商談化 '+Math.round(talks/appts*100)+'%'):'')
+    +fbar('🎉 新規契約',cons,'#4aa9bc', talks?('成約率 '+Math.round(cons/talks*100)+'%'):'');
   var scope = admin ? '<span style="font-size:.6rem;color:var(--text-muted);font-weight:400;margin-left:6px">全員合算</span>' : '';
-  var deals=active.filter(function(p){return p.stage==='talking';});
+  var deals=active.filter(function(p){return p.stage==='appt'||p.stage==='talking';});
   var hi=deals.filter(function(p){return (parseInt(p.probability)||0)>=80;}).length;
   var mid=deals.filter(function(p){var n=parseInt(p.probability)||0;return n>=50&&n<80;}).length;
   var lo=deals.filter(function(p){return (parseInt(p.probability)||0)<50;}).length;
@@ -8191,7 +8193,7 @@ function renderPipeGantt(pl, targetId){
   var el=document.getElementById(targetId||'pipe2-gantt'); if(!el) return;
   var today=(typeof getTodayStr==='function')?getTodayStr():new Date().toISOString().slice(0,10);
   var t0=new Date(today+'T00:00');
-  var rows=(pl||[]).filter(function(p){ return p && p.stage==='talking'; }).map(function(p){
+  var rows=(pl||[]).filter(function(p){ return p && (p.stage==='talking'||p.stage==='appt'); }).map(function(p){
     var startRaw = (p.meetingDate||p.createdAt||'')+'';
     var start = startRaw.slice(0,10);
     var sd = new Date(start+'T00:00');
@@ -10084,7 +10086,7 @@ function dealCountsBy(keyType){
     else { try{ key = companyArea(p) || '愛知'; }catch(e){ key='愛知'; } }
     if(!out[key]) out[key]={appt:0, contract:0};
     /* アポ・商談＝アポ商談＋契約＋NG（＝商談した全企業） */
-    if(p.stage==='talking' || p.stage==='contract' || p.stage==='lost') out[key].appt++;
+    if(p.stage==='appt' || p.stage==='talking' || p.stage==='contract' || p.stage==='lost') out[key].appt++;
     if(p.stage==='contract') out[key].contract++;
   });
   return out;
