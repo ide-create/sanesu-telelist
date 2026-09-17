@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 メンバー追加版79</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 東京エリア版80</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -3286,7 +3286,7 @@ function saveCallBaseline(){ localStorage.setItem('sanesu_call_baseline', JSON.s
 /* 旧callAdjust（固定上書き）は基準値へ移行 */
 let callAdjust = JSON.parse(localStorage.getItem('sanesu_call_adjust') || '{}');
 function saveCallAdjust(){ localStorage.setItem('sanesu_call_adjust', JSON.stringify(callAdjust)); }
-var BL_AREAS = ['愛知','静岡','三重','岐阜'];
+var BL_AREAS = ['愛知','静岡','三重','岐阜','東京'];
 function _blMonthVal(v){
   /* v が数値（旧形式）なら愛知に寄せる。オブジェクトならエリア別 */
   if(v==null||v==='') return {};
@@ -3343,12 +3343,14 @@ const TERRITORIES = {
   '静岡': ['蒲郡市','豊川市','豊橋市','田原市','新城市','浜松市','湖西市'],
   '三重': ['四日市市','鈴鹿市','津市','桑名市','亀山市','伊勢市','松阪市','いなべ市'],
   '岐阜': ['可児市','御嵩町'],
+  '東京': ['大田区','品川区','足立区','葛飾区','江戸川区','板橋区','北区','八王子市','立川市','府中市','日野市','町田市','東京都'],
 };
 const TERRITORY_KEYS = Object.keys(TERRITORIES);
 function companyArea(rec){
   if (rec && rec.area && TERRITORY_KEYS.indexOf(rec.area) !== -1) return rec.area;
   const addr = (rec && rec.address) || '';
   for (const k of TERRITORY_KEYS){ for (const city of TERRITORIES[k]){ if (addr.indexOf(city) !== -1) return k; } }
+  if (addr.indexOf('東京') !== -1) return '東京';
   if (addr.indexOf('岐阜') !== -1) return '岐阜';
   if (addr.indexOf('三重') !== -1) return '三重';
   if (addr.indexOf('静岡') !== -1) return '静岡';
@@ -5111,6 +5113,18 @@ const CITY_COORDS = {
   '一宮市':    {lat:35.3071,lon:136.8041,city:'一宮市'},
   '春日井市':  {lat:35.2477,lon:136.9720,city:'春日井市'},
   '浜松市':    {lat:34.7108,lon:137.7261,city:'浜松市'},
+  '大田区':    {lat:35.5614,lon:139.7161,city:'大田区'},
+  '品川区':    {lat:35.6092,lon:139.7302,city:'品川区'},
+  '足立区':    {lat:35.7750,lon:139.8044,city:'足立区'},
+  '葛飾区':    {lat:35.7434,lon:139.8472,city:'葛飾区'},
+  '江戸川区':  {lat:35.7066,lon:139.8683,city:'江戸川区'},
+  '板橋区':    {lat:35.7512,lon:139.7093,city:'板橋区'},
+  '北区':      {lat:35.7528,lon:139.7336,city:'北区'},
+  '八王子市':  {lat:35.6664,lon:139.3160,city:'八王子市'},
+  '立川市':    {lat:35.6939,lon:139.4079,city:'立川市'},
+  '府中市':    {lat:35.6689,lon:139.4776,city:'府中市'},
+  '日野市':    {lat:35.6712,lon:139.3951,city:'日野市'},
+  '町田市':    {lat:35.5484,lon:139.4467,city:'町田市'},
   '磐田市':    {lat:34.7178,lon:137.8515,city:'磐田市'},
   '静岡市':    {lat:34.9756,lon:138.3827,city:'静岡市'},
   '富士市':    {lat:35.1617,lon:138.6763,city:'富士市'},
@@ -5691,6 +5705,15 @@ const AREA_PRESETS = {
     defaultCategories:['metal','auto'],
     grad:'linear-gradient(135deg,rgba(0,70,70,.55) 0%,rgba(0,160,150,.4) 100%)',
     border:'rgba(79,209,197,.5)', btnColor:'#4fd1c5',
+  },
+  tokyo: {
+    id:'tokyo', icon:'🗼', name:'東京エリア', pref:'東京都',
+    catch:'大田区・城東・多摩の製造業集積',
+    cities:['大田区','品川区','足立区','葛飾区','江戸川区','板橋区','北区','八王子市','立川市','府中市','日野市','町田市'],
+    keywords:['製造業','金属加工','部品製造','機械加工','プレス','組立','工場','製作所'],
+    defaultCategories:['metal','auto','elec'],
+    grad:'linear-gradient(135deg,rgba(80,20,80,.55) 0%,rgba(180,60,140,.4) 100%)',
+    border:'rgba(230,120,200,.5)', btnColor:'#e678c8',
   },
   minato: {
     id:'minato', icon:'⚓', name:'港区エリア', pref:'愛知県',
@@ -10049,7 +10072,7 @@ var MEMBER_NAMES = {
   'yamamura@sanesu-s.co.jp':'\u5c71\u6751',
   'k-saeki@cleartec.jp':'\u4f50\u4f2f'
 };
-var AGG_AREAS = ['\u611b\u77e5','\u4e09\u91cd','\u5c90\u961c','\u9759\u5ca1'];
+var AGG_AREAS = ['\u611b\u77e5','\u4e09\u91cd','\u5c90\u961c','\u9759\u5ca1','\u6771\u4eac'];
 function _aggMetrics(evs){
   var m={call:0,appt:0,nego:0,contract:0};
   evs.forEach(function(e){ if(m[e.type]!=null) m[e.type]++; });
@@ -10094,7 +10117,7 @@ function dealCountsBy(keyType){
 }
 function buildAdminAggHtml(events){
   var MEMBER_NAMES = {'ide@sanesu-s.co.jp':'井手','yoshiyama@sanesu-s.co.jp':'芳山','kodama@sanesu-s.co.jp':'児玉','yamamura@sanesu-s.co.jp':'山村','k-saeki@cleartec.jp':'佐伯'};
-  var AGG_AREAS = ['愛知','三重','岐阜','静岡'];
+  var AGG_AREAS = ['愛知','三重','岐阜','静岡','東京'];
   var all=_aggMetrics(events);
   /* アポ・商談・契約は全商談カード数で（アポ＝商談＝同数） */
   var _dcAll = dealCountsBy('email');
