@@ -2202,7 +2202,7 @@ body.guest-mode .call-btn,body.guest-mode .btn-red,body.guest-mode .btn-green{
 
 <!-- ═══ 目標設定バー ═══ -->
 <div class="db-goal-bar" style="justify-content:space-between">
-  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 アポ商談分離版78</span>
+  <span style="font-size:.58rem;color:rgba(255,255,255,.28);font-family:var(--mono);letter-spacing:.5px">更新 6/26 メンバー追加版79</span>
 </div>
 
 <!-- ═══ 中段4列グリッド（進捗×3＋カレンダー） ═══ -->
@@ -10046,7 +10046,8 @@ var MEMBER_NAMES = {
   'ide@sanesu-s.co.jp':'\u4e95\u624b',
   'yoshiyama@sanesu-s.co.jp':'\u82b3\u5c71',
   'kodama@sanesu-s.co.jp':'\u5150\u7389',
-  'yamamura@sanesu-s.co.jp':'\u5c71\u6751'
+  'yamamura@sanesu-s.co.jp':'\u5c71\u6751',
+  'k-saeki@cleartec.jp':'\u4f50\u4f2f'
 };
 var AGG_AREAS = ['\u611b\u77e5','\u4e09\u91cd','\u5c90\u961c','\u9759\u5ca1'];
 function _aggMetrics(evs){
@@ -10092,7 +10093,7 @@ function dealCountsBy(keyType){
   return out;
 }
 function buildAdminAggHtml(events){
-  var MEMBER_NAMES = {'ide@sanesu-s.co.jp':'井手','yoshiyama@sanesu-s.co.jp':'芳山','kodama@sanesu-s.co.jp':'児玉','yamamura@sanesu-s.co.jp':'山村'};
+  var MEMBER_NAMES = {'ide@sanesu-s.co.jp':'井手','yoshiyama@sanesu-s.co.jp':'芳山','kodama@sanesu-s.co.jp':'児玉','yamamura@sanesu-s.co.jp':'山村','k-saeki@cleartec.jp':'佐伯'};
   var AGG_AREAS = ['愛知','三重','岐阜','静岡'];
   var all=_aggMetrics(events);
   /* アポ・商談・契約は全商談カード数で（アポ＝商談＝同数） */
